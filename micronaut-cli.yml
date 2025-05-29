@@ -1,0 +1,6 @@
+applicationType: default
+defaultPackage: app.xivgear
+testFramework: junit
+sourceLanguage: groovy
+buildTool: gradle
+features: [ annotation-api, app-name, gradle, groovy, groovy-application, http-client-test, jetty-server, junit, logback, micronaut-aot, micronaut-build, micronaut-http-validation, openapi, properties, readme, security-annotations, security-jwt, serialization-jackson, shade, static-resources, swagger-ui ]
