@@ -28,12 +28,12 @@ import java.time.Duration
 @CompileStatic
 class AccountController {
 
-	private final AccountOperations conn
+	private final AccountOperations accOps
 	private final SessionTokenStore<Integer> sts
 	private final CredentialValidator cv
 
-	AccountController(AccountOperations conn, SessionTokenStore sts, CredentialValidator cv) {
-		this.conn = conn
+	AccountController(AccountOperations accOps, SessionTokenStore sts, CredentialValidator cv) {
+		this.accOps = accOps
 		this.sts = sts
 		this.cv = cv
 	}
@@ -41,25 +41,14 @@ class AccountController {
 	@PermitAll
 	@Get("/count")
 	String count() {
-		return conn.count().toString()
+		return accOps.count().toString()
 	}
 
 	@PermitAll
 	@Get("/demo")
 	String demo() {
-		var uid = conn.addUser("foo+${Math.floor(Math.random() * 1_000_000)}@bar.com", "My User", "p@ssw0rd")
+		var uid = accOps.addUser("foo+${Math.floor(Math.random() * 1_000_000)}@bar.com", "My User", "p@ssw0rd")
 		return uid
-	}
-
-	@Secured(SecurityRule.IS_ANONYMOUS)
-	@Post("/register")
-	HttpResponse<RegisterResponse> register(@Body RegisterRequest regRequest, HttpRequest<?> req) {
-		int user = conn.addUser(regRequest.email(), regRequest.displayName(), regRequest.password())
-		String token = sts.createSessionToken user
-		Cookie sessionCookie = createSessionCookie token, req.secure
-		return HttpResponse.ok(new RegisterResponse(user)).with {
-			cookie sessionCookie
-		}
 	}
 
 	static Cookie createSessionCookie(String token, boolean isSecure) {
@@ -70,7 +59,17 @@ class AccountController {
 			path "/"
 			maxAge Duration.ofDays(90)
 		}
+	}
 
+	@Secured(SecurityRule.IS_ANONYMOUS)
+	@Post("/register")
+	HttpResponse<RegisterResponse> register(@Body RegisterRequest regRequest, HttpRequest<?> req) {
+		int user = accOps.addUser regRequest.email(), regRequest.displayName(), regRequest.password()
+		String token = sts.createSessionToken user
+		Cookie sessionCookie = createSessionCookie token, req.secure
+		return HttpResponse.ok(new RegisterResponse(user)).with {
+			cookie sessionCookie
+		}
 	}
 
 	@PermitAll
