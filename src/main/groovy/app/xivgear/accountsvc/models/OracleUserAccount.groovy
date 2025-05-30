@@ -12,6 +12,7 @@ class OracleUserAccount implements UserAccount {
 	private String email
 	String displayName
 	private boolean isVerified
+	String passwordHash
 
 	private final NoSQLHandle handle
 	private final String tableName
@@ -20,7 +21,8 @@ class OracleUserAccount implements UserAccount {
 		this.handle = handle
 		this.tableName = tableName
 		id = value.get("user_id").int
-		email = value.get("email").int
+		email = value.get("email").getString()
+		passwordHash = value.get("password_hash").getString()
 		// TODO: remove from schema
 //		verificationCode = value.get("verification_code").with {
 //			if (isNull()) {
@@ -79,5 +81,18 @@ class OracleUserAccount implements UserAccount {
 	List<String> getRoles() {
 		return []
 	}
-	// TODO: add method for enumerating all emails associated with a user
+
+	@Override
+	String getPasswordHash() {
+		return passwordHash
+	}
+
+	@Override
+	void setPasswordHash(String hash) {
+		update {
+			put "password_hash", hash
+		}
+		passwordHash = hash
+
+	}
 }

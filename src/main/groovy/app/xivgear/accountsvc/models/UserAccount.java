@@ -20,4 +20,7 @@ public interface UserAccount {
 
 	// col roles
 	List<String> getRoles();
+
+	String getPasswordHash();
+	void setPasswordHash(String hash);
 }

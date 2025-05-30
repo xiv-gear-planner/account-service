@@ -13,12 +13,23 @@ micronaut:
   security:
 #    authentication: bearer
     token:
+      generator:
+        access-token:
+          expiration: 7200
       jwt:
         signatures:
           secret:
             generator:
               secret: ${JWT_GENERATOR_SIGNATURE_SECRET:pleaseChangeThisSecretForANewOne}
-    enabled: false
+      cookie:
+        session-cookie: true
+    enabled: true
+    authentication: session
+
+  session:
+    filter:
+      enabled: true
+  #
 
   server:
     cors:
