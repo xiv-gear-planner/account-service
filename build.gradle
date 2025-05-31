@@ -39,7 +39,7 @@ dependencies {
 
 
 application {
-	mainClass = "app.xivgear.Application"
+	mainClass = "app.xivgear.accountsvc.Application"
 }
 java {
 	sourceCompatibility = JavaVersion.toVersion("21")
