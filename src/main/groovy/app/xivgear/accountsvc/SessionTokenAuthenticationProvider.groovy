@@ -10,6 +10,7 @@ import io.micronaut.security.authentication.AuthenticationRequest
 import io.micronaut.security.authentication.AuthenticationResponse
 import io.micronaut.security.authentication.provider.HttpRequestAuthenticationProvider
 
+// TODO: remove
 //@Context
 //@Singleton
 @CompileStatic

@@ -1,10 +1,14 @@
 package app.xivgear.accountsvc.models
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import groovy.transform.CompileStatic
 import oracle.nosql.driver.NoSQLHandle
 import oracle.nosql.driver.ops.PutRequest
 import oracle.nosql.driver.values.MapValue
 
+/**
+ * Oracle NoSQL-backed user account
+ */
 @CompileStatic
 class OracleUserAccount implements UserAccount {
 
@@ -30,7 +34,7 @@ class OracleUserAccount implements UserAccount {
 //			}
 //			return asInteger().value
 //		}
-		isVerified = value.get("is_verified").boolean
+		isVerified = value.get("is_verified").getBoolean()
 	}
 
 	private void update(@DelegatesTo(MapValue) Closure<?> ops) {
@@ -74,12 +78,16 @@ class OracleUserAccount implements UserAccount {
 			put "is_verified", true
 		}
 		this.isVerified = true
-
 	}
 
 	@Override
 	List<String> getRoles() {
-		return []
+		if (verified) {
+			return ['verified']
+		}
+		else {
+			return []
+		}
 	}
 
 	@Override

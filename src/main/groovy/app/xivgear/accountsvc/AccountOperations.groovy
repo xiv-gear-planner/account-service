@@ -19,6 +19,9 @@ import javax.crypto.spec.PBEKeySpec
 import java.security.SecureRandom
 import java.security.spec.KeySpec
 
+/**
+ * Higher-level operations for accounts, such as account creation and login verification.
+ */
 @Context
 @Singleton
 @CompileStatic
@@ -52,11 +55,9 @@ class AccountOperations implements CredentialValidator {
 	public static final String emailsTableName = "emails_test"
 
 	private final NoSQLHandle handle
-	private final JwtTokenGenerator jwtGen
 
-	AccountOperations(NoSQLHandle handle, JwtTokenGenerator jwtGen) {
+	AccountOperations(NoSQLHandle handle) {
 		this.handle = handle
-		this.jwtGen = jwtGen
 	}
 
 	static String saltAndHash(String password) {
@@ -128,7 +129,7 @@ class AccountOperations implements CredentialValidator {
 				put "user_id", id
 			})
 		}
-		GetResult result = handle.get(req)
+		GetResult result = handle.get req
 		return new OracleUserAccount(handle, usersTableName, result.value)
 	}
 
@@ -137,11 +138,11 @@ class AccountOperations implements CredentialValidator {
 		PrepareRequest pr = new PrepareRequest().tap {
 			statement = "select * from ${usersTableName} as c where c.email = ?"
 		}
-		PrepareResult prepare = handle.prepare(pr)
-		prepare.preparedStatement.setVariable(1, new StringValue(email))
+		PrepareResult prepare = handle.prepare pr
+		prepare.preparedStatement.setVariable 1, new StringValue(email)
 		try (QueryRequest qr = new QueryRequest()) {
-			qr.setPreparedStatement(prepare)
-			QueryIterableResult iterable = handle.queryIterable(qr)
+			qr.setPreparedStatement prepare
+			QueryIterableResult iterable = handle.queryIterable qr
 			for (MapValue row : iterable) {
 				return new OracleUserAccount(handle, usersTableName, row)
 			}
@@ -152,17 +153,17 @@ class AccountOperations implements CredentialValidator {
 	long count() {
 		long total = 0
 		try (QueryRequest qr = new QueryRequest()) {
-			qr.setStatement("SELECT count(*) AS ct FROM ${usersTableName}")
+			qr.statement = "SELECT count(*) AS ct FROM ${usersTableName}"
 			do {
-				QueryResult res = handle.query(qr);
+				QueryResult res = handle.query qr
 				// Only non-empty batches will contain the aggregate row
 				for (MapValue row : res.getResults()) {
-					total = row.get("ct").getLong();
+					total = row.get("ct").getLong()
 				}
-			} while (!qr.isDone());
+			} while (!qr.isDone())
 		}
-		log.info("Results: {}", total);
-		return total;
+		log.info "Results: {}", total
+		return total
 	}
 
 //	@Nullable

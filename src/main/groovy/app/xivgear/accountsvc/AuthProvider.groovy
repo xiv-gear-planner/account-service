@@ -13,6 +13,7 @@ import io.micronaut.security.authentication.AuthenticationResponse
 import io.micronaut.security.authentication.provider.HttpRequestAuthenticationProvider
 import jakarta.inject.Singleton
 
+// TODO: remove
 //@Context
 //@Singleton
 //@CompileStatic

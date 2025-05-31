@@ -8,5 +8,5 @@ import java.util.List;
 @Introspected
 @Serdeable.Serializable
 @Serdeable.Deserializable
-public record CheckAuthResponse(int uid, String email, List<String> roles, boolean verified) {
+public record AccountInfo(int uid, String email, List<String> roles, boolean verified) {
 }

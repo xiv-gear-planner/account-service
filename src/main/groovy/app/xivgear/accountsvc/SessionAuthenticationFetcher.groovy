@@ -11,6 +11,9 @@ import io.micronaut.security.filters.AuthenticationFetcher
 import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
 
+/**
+ * Checks SESSION cookie to find the associated account
+ */
 @Context
 @Singleton
 @CompileStatic
@@ -31,7 +34,10 @@ class SessionAuthenticationFetcher implements AuthenticationFetcher<HttpRequest<
 				.flatMap(store::validateSessionToken)
 				.map({
 					UserAccount user = ops.getById it
-					Authentication.build it.toString(), user.roles, ['userData': user] as Map<String, Object>
+					Authentication.build it.toString(), user.roles,
+							[
+									'userData': user
+							] as Map<String, Object>
 				})
 		if (opt.isPresent()) {
 			return Publishers.just(opt.get())

@@ -1,4 +1,4 @@
-package app.xivgear.accountsvc
+package app.xivgear.accountsvc.nosql
 
 
 import com.oracle.bmc.auth.SimpleAuthenticationDetailsProvider
@@ -14,6 +14,9 @@ import oracle.nosql.driver.NoSQLHandleConfig
 import oracle.nosql.driver.NoSQLHandleFactory
 import oracle.nosql.driver.iam.SignatureProvider
 
+/**
+ * Reads configuration and produces a NoSQLHandle.
+ */
 @Context
 @Singleton
 @CompileStatic

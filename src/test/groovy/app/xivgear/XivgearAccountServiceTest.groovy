@@ -13,7 +13,7 @@ class XivgearAccountServiceTest {
 
 	@Test
 	void testItWorks() {
-		assert application.running == true
+		assert application.running
 	}
 
 }
