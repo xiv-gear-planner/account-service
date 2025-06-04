@@ -11,7 +11,7 @@ public interface UserAccount {
 
 	// col email
 	String getEmail();
-	void setEmail();
+	void setEmail(String email);
 
 	// col verified
 	boolean isVerified();
@@ -23,4 +23,6 @@ public interface UserAccount {
 
 	String getPasswordHash();
 	void setPasswordHash(String hash);
+
+	boolean verifyEmail(String email, int code);
 }

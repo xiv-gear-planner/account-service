@@ -1,12 +1,12 @@
 package app.xivgear.accountsvc
 
+import app.xivgear.accountsvc.email.VerificationCodeSender
 import app.xivgear.accountsvc.models.OracleUserAccount
 import app.xivgear.accountsvc.models.UserAccount
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.micronaut.context.annotation.Context
 import io.micronaut.core.annotation.Nullable
-import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import jakarta.inject.Singleton
 import oracle.nosql.driver.NoSQLHandle
 import oracle.nosql.driver.ops.*
@@ -39,6 +39,7 @@ class AccountOperations implements CredentialValidator {
 		PRIMARY KEY ( SHARD ( user_id ) )
 	)
 	*/
+	// TODO: parameterize the table names
 	public static final String usersTableName = "users_test"
 	// Uses a separate table of emails so that we can enforce uniqueness. Oracle NoSQL does not offer a "unqiue index"
 	// feature, and normal indices are only atomic within a shard.
@@ -55,9 +56,11 @@ class AccountOperations implements CredentialValidator {
 	public static final String emailsTableName = "emails_test"
 
 	private final NoSQLHandle handle
+	private final VerificationCodeSender verifier
 
-	AccountOperations(NoSQLHandle handle) {
+	AccountOperations(NoSQLHandle handle, VerificationCodeSender verifier) {
 		this.handle = handle
+		this.verifier = verifier
 	}
 
 	static String saltAndHash(String password) {
@@ -109,15 +112,17 @@ class AccountOperations implements CredentialValidator {
 		}
 		PutResult userResult = handle.put userReq
 		int uid = userResult.generatedValue.asInteger().value
+		int verificationCode = Math.abs(new SecureRandom().nextInt()) % 1_000_000
 		var emailUpdateReq = new PutRequest().tap {
 			tableName = emailsTableName
 			setValue(new MapValue().tap {
 				put "email", email
 				put "owner_uid", uid
-				put "verification_code", Math.abs(new SecureRandom().nextInt())
+				put "verification_code", verificationCode
 			})
 		}
 		handle.put emailUpdateReq
+		verifier.sendVerificationCode email, String.format("%06d", verificationCode)
 		return uid
 	}
 

@@ -10,30 +10,37 @@ import io.micronaut.context.annotation.Context
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
-import io.micronaut.http.annotation.Produces
 import io.micronaut.http.cookie.Cookie
 import io.micronaut.http.cookie.SameSite
+import io.micronaut.scheduling.TaskExecutors
+import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
 import jakarta.annotation.security.PermitAll
 import jakarta.inject.Singleton
+import jakarta.validation.Valid
 
 import java.time.Duration
 
 /**
  * Endpoints for account management, including login and registration.
+ *
+ * TODO: input validation for all endpoints
  */
 @Controller("/account")
 @Context
 @Singleton
 @CompileStatic
+@ExecuteOn(TaskExecutors.BLOCKING)
 class AccountController {
 
 	private final AccountOperations accOps
@@ -47,19 +54,12 @@ class AccountController {
 		this.cv = cv
 		this.jwtGen = jwtGen
 	}
-
-	@PermitAll
-	@Get("/count")
-	String count() {
-		return accOps.count().toString()
-	}
-
-	@PermitAll
-	@Get("/demo")
-	String demo() {
-		var uid = accOps.addUser("foo+${Math.floor(Math.random() * 1_000_000)}@bar.com", "My User", "p@ssw0rd")
-		return uid
-	}
+//
+//	@PermitAll
+//	@Get("/count")
+//	String count() {
+//		return accOps.count().toString()
+//	}
 
 	/**
 	 * Creates a session cookie with the desired properties
@@ -91,7 +91,16 @@ class AccountController {
 	 */
 	@Secured(SecurityRule.IS_ANONYMOUS)
 	@Post("/register")
-	HttpResponse<RegisterResponse> register(@Body RegisterRequest regRequest, HttpRequest<?> req) {
+	@ApiResponse(
+			responseCode = "400",
+			description = "Validation error",
+			content = @Content(
+					mediaType = "application/json",
+					schema = @Schema(implementation = ValidationErrorResponse.class)
+			)
+	)
+	HttpResponse<RegisterResponse> register(@Body @Valid RegisterRequest regRequest, HttpRequest<?> req) {
+		// TODO: validate format of username, display name, password
 		int user = accOps.addUser regRequest.email(), regRequest.displayName(), regRequest.password()
 		String token = sts.createSessionToken user
 		Cookie sessionCookie = createSessionCookie token, req.secure
@@ -122,7 +131,7 @@ class AccountController {
 
 		Cookie sessionCookie = createSessionCookie token, request.secure
 
-		return HttpResponse.ok(new LoginResponse(user.id, "Login successful"))
+		return HttpResponse.ok(new LoginResponse(new AccountInfo(user), "Login successful"))
 				.cookie(sessionCookie)
 	}
 
@@ -154,12 +163,12 @@ class AccountController {
 	@Secured(SecurityRule.IS_AUTHENTICATED)
 	AccountInfo accountInfo(Authentication auth) {
 		var user = auth.attributes['userData'] as UserAccount
-		return new AccountInfo(user.id, user.email, user.roles, user.verified)
+		return new AccountInfo(user)
 	}
 
 	@Get("/jwt")
 	@Secured(SecurityRule.IS_AUTHENTICATED)
-	HttpResponse<?> getJwt(Authentication auth, HttpRequest<?> request) {
+	HttpResponse<JwtResponse> getJwt(Authentication auth) {
 		var user = auth.attributes['userData'] as UserAccount
 		// The normal auth contains the user as an attribute, but the UserData object can't necessarily be
 		// serialized. Thus we need to create a more minimal version.
@@ -168,13 +177,21 @@ class AccountController {
 		] as Map<String, Object>
 		Optional<String> token = jwtGen.generateToken minAuth, 30 * 60
 		if (token.isPresent()) {
-			Cookie jwtCookie = createAuthCookie "xivgear-jwt", token.get(), request.secure
-			return HttpResponse.ok()
-					.cookie(jwtCookie)
+			return HttpResponse.ok(new JwtResponse(token.get()))
 		}
 		else {
 			return HttpResponse.unauthorized()
 		}
 	}
 
+	@Post("/verify")
+	@Secured(SecurityRule.IS_AUTHENTICATED)
+	VerifyEmailResponse verifyEmail(@Body VerifyEmailRequest req, Authentication auth) {
+		var user = auth.attributes['userData'] as UserAccount
+		boolean verified = user.verifyEmail(req.email, req.code)
+		return new VerifyEmailResponse().tap {
+			it.verified = verified
+			it.accountInfo = new AccountInfo(user)
+		}
+	}
 }
