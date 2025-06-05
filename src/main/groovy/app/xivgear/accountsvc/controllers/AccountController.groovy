@@ -4,9 +4,11 @@ import app.xivgear.accountsvc.AccountOperations
 import app.xivgear.accountsvc.CredentialValidator
 import app.xivgear.accountsvc.SessionTokenStore
 import app.xivgear.accountsvc.dto.*
+import app.xivgear.accountsvc.email.VerificationCodeSender
 import app.xivgear.accountsvc.models.UserAccount
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Context
+import io.micronaut.core.annotation.Nullable
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
@@ -100,7 +102,6 @@ class AccountController {
 			)
 	)
 	HttpResponse<RegisterResponse> register(@Body @Valid RegisterRequest regRequest, HttpRequest<?> req) {
-		// TODO: validate format of username, display name, password
 		int user = accOps.addUser regRequest.email(), regRequest.displayName(), regRequest.password()
 		String token = sts.createSessionToken user
 		Cookie sessionCookie = createSessionCookie token, req.secure
@@ -148,6 +149,13 @@ class AccountController {
 		if (token.isPresent()) {
 			sts.invalidateSessionToken token.get()
 			return HttpResponse.status(HttpStatus.OK)
+					.cookie(Cookie.of("SESSION", "").with {
+						httpOnly true
+						secure true
+						sameSite SameSite.Lax
+						path "/"
+						maxAge Duration.ZERO
+					})
 		}
 		else {
 			return HttpResponse.unauthorized()
@@ -155,7 +163,7 @@ class AccountController {
 	}
 
 	/**
-	 * Get information about the currently logged-in account
+	 * Get information about the currently logged-in account. Returns 401 unauthorized if not logged in.
 	 * @param auth
 	 * @return
 	 */
@@ -164,6 +172,28 @@ class AccountController {
 	AccountInfo accountInfo(Authentication auth) {
 		var user = auth.attributes['userData'] as UserAccount
 		return new AccountInfo(user)
+	}
+
+	/**
+	 * Get information about the currently logged-in account. Returns a response where loggedIn == false and
+	 * accountInfo == null if not logged in.
+	 *
+	 * @param auth
+	 * @return
+	 */
+	@Get("/current")
+	@PermitAll
+	AccountInfoResponse currentAccount(@Nullable Authentication auth) {
+		return new AccountInfoResponse().tap {
+			if (auth == null) {
+				loggedIn = false
+			}
+			else {
+				var user = auth.attributes['userData'] as UserAccount
+				loggedIn = true
+				accountInfo = new AccountInfo(user)
+			}
+		}
 	}
 
 	@Get("/jwt")
@@ -193,5 +223,12 @@ class AccountController {
 			it.verified = verified
 			it.accountInfo = new AccountInfo(user)
 		}
+	}
+
+	@Post("/resendVerificationCode")
+	@Secured(SecurityRule.IS_AUTHENTICATED)
+	void resendVerificationCode(Authentication auth) {
+		var user = auth.attributes['userData'] as UserAccount
+		accOps.resendVerificationCode(user, user.email)
 	}
 }

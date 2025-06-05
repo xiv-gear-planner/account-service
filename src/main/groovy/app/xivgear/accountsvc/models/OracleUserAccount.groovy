@@ -102,6 +102,7 @@ class OracleUserAccount implements UserAccount {
 
 	@Override
 	void setEmail(String email) {
+		throw new RuntimeException("not implemented")
 		// TODO
 	}
 

@@ -54,6 +54,7 @@ class AccountOperations implements CredentialValidator {
 	// TODO: make index for owner_uid
 	 */
 	public static final String emailsTableName = "emails_test"
+	// TODO: sessions table
 
 	private final NoSQLHandle handle
 	private final VerificationCodeSender verifier
@@ -155,21 +156,21 @@ class AccountOperations implements CredentialValidator {
 		return null
 	}
 
-	long count() {
-		long total = 0
-		try (QueryRequest qr = new QueryRequest()) {
-			qr.statement = "SELECT count(*) AS ct FROM ${usersTableName}"
-			do {
-				QueryResult res = handle.query qr
-				// Only non-empty batches will contain the aggregate row
-				for (MapValue row : res.getResults()) {
-					total = row.get("ct").getLong()
-				}
-			} while (!qr.isDone())
-		}
-		log.info "Results: {}", total
-		return total
-	}
+//	long count() {
+//		long total = 0
+//		try (QueryRequest qr = new QueryRequest()) {
+//			qr.statement = "SELECT count(*) AS ct FROM ${usersTableName}"
+//			do {
+//				QueryResult res = handle.query qr
+//				// Only non-empty batches will contain the aggregate row
+//				for (MapValue row : res.getResults()) {
+//					total = row.get("ct").getLong()
+//				}
+//			} while (!qr.isDone())
+//		}
+//		log.info "Results: {}", total
+//		return total
+//	}
 
 //	@Nullable
 //	Object login(String email, String password) {
@@ -195,5 +196,25 @@ class AccountOperations implements CredentialValidator {
 			return Optional.empty()
 		}
 		return Optional.of(user)
+	}
+
+	void resendVerificationCode(UserAccount userAccount, String email) {
+
+		// TODO: resend throttle
+
+		var getEmailReq = new GetRequest().tap {
+			tableName = emailsTableName
+			key = new MapValue().tap {
+				put "email", email
+			}
+		}
+		GetResult result = handle.get getEmailReq
+		MapValue foundEmail = result.value
+		int ownerUid = foundEmail.get('owner_uid').getInt()
+		int id = userAccount.id
+		if (ownerUid != id) {
+			throw new IllegalArgumentException("User tried to resend verification for someone else's email! email '${email}' owned by ${ownerUid} but verified by ${id}")
+		}
+		verifier.sendVerificationCode email, String.format("%06d", foundEmail.getInt("verification_code"))
 	}
 }

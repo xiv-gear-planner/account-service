@@ -1,8 +1,8 @@
 package app.xivgear.accountsvc
 
 import io.micronaut.core.annotation.NonNull
-
-import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpRequest
+import io.micronaut.http.cookie.Cookie
 
 interface SessionTokenStore<X> {
 
@@ -23,7 +23,6 @@ interface SessionTokenStore<X> {
 	 */
 	@NonNull
 	String createSessionToken(@NonNull X user);
-	// TODO: this should use user ID
 
 	/**
 	 * Invalidates a session token (e.g., for logout).
@@ -39,6 +38,7 @@ interface SessionTokenStore<X> {
 	default Optional<String> extractTokenFromRequest(@NonNull HttpRequest<?> request) {
 		return request.getCookies()
 				.findCookie("SESSION")
-				.map(cookie -> cookie.getValue());
+				.map(Cookie::getValue)
+				.filter(val -> !val.empty)
 	}
 }

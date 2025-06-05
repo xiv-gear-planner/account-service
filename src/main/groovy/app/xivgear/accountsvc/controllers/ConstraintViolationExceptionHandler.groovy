@@ -1,6 +1,7 @@
 package app.xivgear.accountsvc.controllers
 
 import app.xivgear.accountsvc.dto.ValidationErrorResponse
+import app.xivgear.accountsvc.dto.ValidationErrorSingle
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Context
 import io.micronaut.core.annotation.Order
@@ -10,6 +11,7 @@ import io.micronaut.http.HttpResponse
 import io.micronaut.http.server.exceptions.ExceptionHandler
 import jakarta.inject.Singleton
 import jakarta.validation.ConstraintViolationException
+import jakarta.validation.Path
 
 @Context
 @Singleton
@@ -19,12 +21,20 @@ class ConstraintViolationExceptionHandler implements ExceptionHandler<Constraint
 
 	@Override
 	HttpResponse<ValidationErrorResponse> handle(HttpRequest request, ConstraintViolationException exception) {
-		Map<String, String> errors = new HashMap<>()
+		List<ValidationErrorSingle> errors = []
 		exception.constraintViolations.each {cv ->
-			errors[cv.propertyPath.toString()] = cv.message
+			errors << new ValidationErrorSingle().tap {
+				path = cv.propertyPath.toString()
+				message = cv.message
+				Path.Node lastNode = null;
+				for (Path.Node node : cv.propertyPath) {
+					lastNode = node;
+				}
+				field = lastNode.getName();
+			}
 		}
 		var out = new ValidationErrorResponse()
-		out.errors = errors
+		out.validationErrors = errors
 		return HttpResponse.badRequest(out)
 	}
 

@@ -90,6 +90,18 @@ class FullFlowTest {
 			Assertions.assertEquals email, response.body().email()
 			Assertions.assertEquals myUid, response.body().uid()
 		}
+		// Check the other account info endpoint
+		{
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/current")).with {
+				cookie sessionCookie
+			}
+			HttpResponse<AccountInfoResponse> response = client.toBlocking().exchange req, AccountInfoResponse
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+			Assertions.assertTrue response.body().loggedIn
+			Assertions.assertEquals email, response.body().accountInfo.email()
+			Assertions.assertEquals myUid, response.body().accountInfo.uid()
+		}
 		// Check that email was sent
 		int verificationCode
 		{
@@ -100,6 +112,24 @@ class FullFlowTest {
 			Assertions.assertTrue matcher.matches()
 			verificationCode = Integer.parseInt(matcher.group(1))
 		}
+		// Request resend
+		{
+			HttpRequest<?> req = HttpRequest.POST(server.URI.resolve("account/resendVerificationCode"), "").with {
+				cookie sessionCookie
+			}
+			HttpResponse<String> response = client.toBlocking().exchange req, String
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+
+			Assertions.assertEquals 2, emails.size()
+			Email mail = emails[1]
+			Assertions.assertTrue mail.subject.contains("Your Xivgear.app verification code is ")
+			var matcher = mail.subject =~ ".*([0-9]{6})"
+			Assertions.assertTrue matcher.matches()
+			int resentVerificationCode = Integer.parseInt(matcher.group(1))
+			// Verification code does not change upon resend
+			Assertions.assertEquals verificationCode, resentVerificationCode
+		}
 
 		// Log out.
 		{
@@ -109,6 +139,8 @@ class FullFlowTest {
 			HttpResponse<String> response = client.toBlocking().exchange req, String
 			validateResponseHeaders response
 			Assertions.assertEquals HttpStatus.OK, response.status
+			Cookie emptyCookie = response.getCookie("SESSION").orElseThrow()
+			Assertions.assertEquals "", emptyCookie.value
 		}
 
 		// Verify logged out
@@ -117,6 +149,17 @@ class FullFlowTest {
 			HttpResponse<String> response = client.toBlocking().exchange(req, Argument.STRING, Argument.STRING)
 			validateResponseHeaders response
 			Assertions.assertEquals(HttpStatus.UNAUTHORIZED, response.status)
+		}
+		// Verify in the other endpoint
+		{
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/current")).with {
+				cookie sessionCookie
+			}
+			HttpResponse<AccountInfoResponse> response = client.toBlocking().exchange req, AccountInfoResponse
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+			Assertions.assertFalse response.body().loggedIn
+			Assertions.assertNull response.body().accountInfo
 		}
 
 		{
@@ -244,9 +287,13 @@ class FullFlowTest {
 
 			Assertions.assertEquals(HttpStatus.BAD_REQUEST, response.status())
 			ValidationErrorResponse body = response.body()
-			Assertions.assertEquals(2, body.errors.size())
-			Assertions.assertEquals("Must be a valid email", body.errors['register.regRequest.email'])
-			Assertions.assertEquals("Display Name must be between 2 and 64 characters", body.errors['register.regRequest.displayName'])
+			Assertions.assertEquals(2, body.validationErrors.size())
+			Assertions.assertEquals('Must be a valid email', body.validationErrors[0].message)
+			Assertions.assertEquals('register.regRequest.email', body.validationErrors[0].path)
+			Assertions.assertEquals('email', body.validationErrors[0].field)
+			Assertions.assertEquals('Display Name must be between 2 and 64 characters', body.validationErrors[1].message)
+			Assertions.assertEquals('register.regRequest.displayName', body.validationErrors[1].path)
+			Assertions.assertEquals('displayName', body.validationErrors[1].field)
 			validateResponseHeaders response
 		}
 	}
