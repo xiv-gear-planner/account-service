@@ -48,15 +48,16 @@ micronaut:
 
 
 oci:
-  tenant-id: ${ORACLE_CLOUD_TENANT_ID:}
-  user-id: ${ORACLE_CLOUD_USER_ID:}
-  fingerprint: ${ORACLE_CLOUD_FINGERPRINT:}
-  private-key-file: file:${ORACLE_CLOUD_PEM_PATH:}
-  region: ${ORACLE_CLOUD_OBJECT_STORAGE_REGION:}
+  tenant-id: ${ORACLE_CLOUD_TENANT_ID}
+  user-id: ${ORACLE_CLOUD_USER_ID}
+  fingerprint: ${ORACLE_CLOUD_FINGERPRINT}
+  private-key-file: file:${ORACLE_CLOUD_PEM_PATH}
+  region: ${ORACLE_CLOUD_OBJECT_STORAGE_REGION}
 
 oracle-nosql:
   endpoint: "https://nosql.us-sanjose-1.oci.oraclecloud.com:443/"
-  compartment: ${ORACLE_CLOUD_COMPARTMENT_ID:}
+  mode: cloud
+  compartment: ${ORACLE_CLOUD_COMPARTMENT_ID}
   tables:
     users:
       name: "users_test"
@@ -65,6 +66,7 @@ oracle-nosql:
     sessions:
       name: "sessions_test"
 
+# Optional for local testing
 smtp:
   user: ${EMAIL_USER:}
   password: ${EMAIL_PASSWORD:}

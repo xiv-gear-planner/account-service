@@ -5,8 +5,20 @@ import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
 import oracle.nosql.driver.NoSQLHandle
+import oracle.nosql.driver.ops.TableRequest
+import oracle.nosql.driver.ops.TableResult
 import oracle.nosql.driver.values.FieldValue
 import oracle.nosql.driver.values.StringValue
+
+import static app.xivgear.accountsvc.nosql.UserCol.display_name
+import static app.xivgear.accountsvc.nosql.UserCol.display_name
+import static app.xivgear.accountsvc.nosql.UserCol.email
+import static app.xivgear.accountsvc.nosql.UserCol.email
+import static app.xivgear.accountsvc.nosql.UserCol.is_verified
+import static app.xivgear.accountsvc.nosql.UserCol.password_hash
+import static app.xivgear.accountsvc.nosql.UserCol.roles
+import static app.xivgear.accountsvc.nosql.UserCol.user_id
+import static app.xivgear.accountsvc.nosql.UserCol.user_id
 
 @Context
 @Singleton
@@ -36,5 +48,24 @@ class EmailsTable extends RawNoSqlTable<EmailCol, String> {
 	@Override
 	protected FieldValue pkToFieldValue(String pk) {
 		return new StringValue(pk)
+	}
+
+	@Override
+	protected void initTable() {
+		String ddl = """CREATE TABLE IF NOT EXISTS ${tableName} (
+email STRING, owner_uid INTEGER NOT NULL DEFAULT -1, verified BOOLEAN NOT NULL DEFAULT false, verification_code INTEGER, 
+PRIMARY KEY(SHARD(email)))
+"""
+
+		String incides = """
+CREATE INDEX IF NOT EXISTS email_index ON ${tableName}(${email});
+CREATE INDEX IF NOT EXISTS display_name_index ON ${tableName}(${display_name});
+"""
+
+		var tr = new TableRequest().tap {
+			statement = ddl
+		}
+		TableResult result = handle.tableRequest(tr)
+		result.waitForCompletion(handle, 30_000, 500)
 	}
 }

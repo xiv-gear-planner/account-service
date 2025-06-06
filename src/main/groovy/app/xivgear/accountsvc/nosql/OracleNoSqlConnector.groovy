@@ -6,13 +6,17 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import io.micronaut.oraclecloud.core.OracleCloudAuthConfigurationProperties
 import jakarta.inject.Singleton
+import oracle.nosql.driver.AuthorizationProvider
 import oracle.nosql.driver.NoSQLHandle
 import oracle.nosql.driver.NoSQLHandleConfig
 import oracle.nosql.driver.NoSQLHandleFactory
 import oracle.nosql.driver.iam.SignatureProvider
+import oracle.nosql.driver.kv.StoreAccessTokenProvider
+import oracle.nosql.driver.ops.Request
 
 /**
  * Reads configuration and produces a NoSQLHandle.
@@ -24,24 +28,53 @@ import oracle.nosql.driver.iam.SignatureProvider
 @Factory
 class OracleNoSqlConnector {
 
-	private final NoSQLHandle handle
+	private final URL endpoint
 
-	OracleNoSqlConnector(
+	OracleNoSqlConnector(@Value('${oracle-nosql.endpoint}') URL endpoint) {
+		this.endpoint = endpoint
+	}
+
+	private NoSQLHandleConfig base() {
+		NoSQLHandleConfig config = new NoSQLHandleConfig(endpoint)
+		config.configureDefaultRetryHandler 8, 1_0000
+		return config
+	}
+
+	@Singleton
+	@Requires(property = 'oracle-nosql.mode', value = 'local')
+	NoSQLHandle localNoSqlHandle() {
+		NoSQLHandleConfig config = base()
+//		if (true) {
+//			config.authorizationProvider = new AuthorizationProvider() {
+//				@Override
+//				String getAuthorizationString(Request request) {
+//					return "Bearer exampleId"
+//				}
+//
+//				@Override
+//				void close() {
+//
+//				}
+//			}
+//		}
+//		config.authorizationProvider = null
+		config.authorizationProvider = new StoreAccessTokenProvider()
+		NoSQLHandle handle = NoSQLHandleFactory.createNoSQLHandle(config)
+		return handle
+	}
+
+	@Singleton
+	@Requires(property = 'oracle-nosql.mode', value = 'cloud')
+	NoSQLHandle cloudNoSqlHandle(
 			OracleCloudAuthConfigurationProperties auth,
-			@Value('${oracle-nosql.endpoint}') URL endpoint,
 			@Value('${oracle-nosql.compartment}') String compartmentId
 	) {
-		NoSQLHandleConfig config = new NoSQLHandleConfig(endpoint)
+		NoSQLHandleConfig config = base()
 		SimpleAuthenticationDetailsProvider build = auth.builder.build()
 		SignatureProvider sp = new SignatureProvider(build.tenantId, build.userId, build.fingerprint, new String(build.privateKey.readAllBytes()), null)
 		config.authorizationProvider = sp
 		config.defaultCompartment = compartmentId
-		config.configureDefaultRetryHandler 8, 1_0000
-		handle = NoSQLHandleFactory.createNoSQLHandle config
+		return NoSQLHandleFactory.createNoSQLHandle(config)
 	}
 
-	@Singleton
-	NoSQLHandle getHandle() {
-		return handle
-	}
 }

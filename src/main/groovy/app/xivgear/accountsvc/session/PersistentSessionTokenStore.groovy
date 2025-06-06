@@ -10,7 +10,6 @@ import io.micronaut.core.annotation.NonNull
 import jakarta.inject.Singleton
 import oracle.nosql.driver.ops.GetResult
 import oracle.nosql.driver.values.IntegerValue
-import oracle.nosql.driver.values.MapValue
 import org.bouncycastle.util.encoders.Hex
 
 import java.security.SecureRandom
@@ -19,7 +18,6 @@ import java.security.SecureRandom
 @Singleton
 @CompileStatic
 @Slf4j
-@Primary
 class PersistentSessionTokenStore implements SessionTokenStore<Integer> {
 
 	private final SessionsTable sessionsTable

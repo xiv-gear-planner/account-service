@@ -1,13 +1,17 @@
 package app.xivgear.accountsvc.nosql
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import io.micronaut.context.annotation.Property
 import io.micronaut.core.annotation.Nullable
+import jakarta.annotation.PostConstruct
 import oracle.nosql.driver.NoSQLHandle
 import oracle.nosql.driver.ops.*
 import oracle.nosql.driver.values.FieldValue
 import oracle.nosql.driver.values.MapValue
 
 @CompileStatic
+@Slf4j
 abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 
 	protected final ColType primaryKeyCol
@@ -236,5 +240,17 @@ abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 //		}
 //		return null
 //	}
+
+	@PostConstruct
+	void init(@Property(name = 'oracle-nosql.createTables', defaultValue = 'false') boolean create) {
+		if (create) {
+			log.info "init table ${tableName}"
+			initTable()
+		}
+	}
+
+	protected void initTable() {
+
+	}
 
 }

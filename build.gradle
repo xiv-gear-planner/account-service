@@ -75,6 +75,14 @@ micronaut {
 		replaceLogbackXml = true
 		configurationProperties.put("micronaut.security.jwks.enabled", "false")
 	}
+	dockerfile {
+		args "-XX:+UseG1GC"
+		args "-XX:MinHeapFreeRatio=15"
+		args "-XX:MaxHeapFreeRatio=30"
+		args "-XX:MaxRAMPercentage=70"
+		// TODO measure performance impact
+//		args "-XX:+UseStringDeduplication"
+	}
 }
 
 
@@ -89,4 +97,8 @@ tasks.withType(GroovyCompile).configureEach {
 	groovyOptions.forkOptions.jvmArgs << '-Dmicronaut.openapi.views.spec=swagger-ui.enabled=true'
 	groovyOptions.forkOptions.jvmArgs << '-Dmicronaut.jsonschema.strictMode=true'
 //	groovyOptions.forkOptions.jvmArgs << '-Dmicronaut.openapi.json.format=true'
+}
+
+tasks.named("dockerfile") {
+	baseImage = "openjdk:21"
 }

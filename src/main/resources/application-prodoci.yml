@@ -1,0 +1,21 @@
+micronaut:
+  security:
+    token:
+      jwt:
+        signatures:
+          secret:
+            generator:
+              secret: ${JWT_GENERATOR_SIGNATURE_SECRET}
+
+oracle-nosql:
+  tables:
+    users:
+      name: "users"
+    emails:
+      name: "emails"
+    sessions:
+      name: "sessions"
+
+smtp:
+  user: ${EMAIL_USER}
+  password: ${EMAIL_PASSWORD}
