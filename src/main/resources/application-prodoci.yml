@@ -7,6 +7,13 @@ micronaut:
             generator:
               secret: ${JWT_GENERATOR_SIGNATURE_SECRET}
 
+oci:
+  tenant-id: ${ORACLE_CLOUD_TENANT_ID}
+  user-id: ${ORACLE_CLOUD_USER_ID}
+  fingerprint: ${ORACLE_CLOUD_FINGERPRINT}
+  private-key-file: file:${ORACLE_CLOUD_PEM_PATH}
+  region: ${ORACLE_CLOUD_OBJECT_STORAGE_REGION}
+
 oracle-nosql:
   tables:
     users:
