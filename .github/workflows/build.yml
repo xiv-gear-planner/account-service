@@ -40,7 +40,7 @@ jobs:
 
         # We need to run the nosql DB for integration testing:
       - name: Start NoSQL for testing
-        run: docker run --name=kvlite --hostname=kvlite --env KV_PROXY_PORT=8080 -p 9050:8080 --rm --name nosql ghcr.io/oracle/nosql:latest-ce
+        run: docker run -d --name=kvlite --hostname=kvlite --env KV_PROXY_PORT=8080 -p 9050:8080 --rm --name nosql ghcr.io/oracle/nosql:latest-ce
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
