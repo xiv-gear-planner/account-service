@@ -12,6 +12,7 @@ import io.micronaut.email.TransactionalEmailSender
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
+import io.micronaut.http.MutableHttpRequest
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.netty.DefaultHttpClient
 import io.micronaut.http.cookie.Cookie
@@ -48,18 +49,36 @@ class FullFlowTest {
 
 	static void validateResponseHeaders(HttpResponse<?> resp) {
 		Assertions.assertEquals "no-cache", resp.header("Cache-Control")
+		Assertions.assertEquals "no-cache", resp.header("Pragma")
+		Assertions.assertEquals "0", resp.header("Expires")
+	}
+
+	static <X> MutableHttpRequest<X> addHeaders(MutableHttpRequest<X> req) {
+		req.header("xivgear-csrf", "1")
 	}
 
 	@Test
 	void testRejectUnauth() {
-		HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/info"))
+		HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/info")).with {
+			addHeaders it
+		}
 		HttpResponse<String> response = client.toBlocking().exchange(req, Argument.STRING, Argument.STRING)
 		validateResponseHeaders response
 		Assertions.assertEquals(HttpStatus.UNAUTHORIZED, response.status)
 	}
 
 	@Test
-	void testCreateLoginLogout() {
+	void testRejectMissingHeader() {
+		HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/info")).with {
+			addHeaders it
+		}
+		HttpResponse<String> response = client.toBlocking().exchange(req, Argument.STRING, Argument.STRING)
+		validateResponseHeaders response
+		Assertions.assertEquals(HttpStatus.UNAUTHORIZED, response.status)
+	}
+
+	@Test
+	void testFullFlow() {
 		// Register
 		String email = "foo+${(Math.random() * 1_000_000) as int}@bar.com"
 		log.info "Generated email: ${email}"
@@ -69,13 +88,18 @@ class FullFlowTest {
 		{
 			HttpRequest<RegisterRequest> req = HttpRequest.POST(
 					server.URI.resolve("account/register"),
-					new RegisterRequest(email, password, "My User"))
+					new RegisterRequest(email, password, "My User")
+			).with {
+				addHeaders it
+			}
 
 			HttpResponse<RegisterResponse> response = client.toBlocking().exchange(req, RegisterResponse)
 			validateResponseHeaders response
 
 			myUid = response.body().uid()
+			log.info "My UID: ${myUid}"
 			sessionCookie = response.getCookie("SESSION").orElseThrow()
+			log.info "Session cookie: ${sessionCookie}"
 		}
 
 		// Registration implicitly logs you in.
@@ -83,6 +107,7 @@ class FullFlowTest {
 		{
 			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/info")).with {
 				cookie sessionCookie
+				addHeaders it
 			}
 			HttpResponse<AccountInfo> response = client.toBlocking().exchange req, AccountInfo
 			validateResponseHeaders response
@@ -94,6 +119,7 @@ class FullFlowTest {
 		{
 			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/current")).with {
 				cookie sessionCookie
+				addHeaders it
 			}
 			HttpResponse<AccountInfoResponse> response = client.toBlocking().exchange req, AccountInfoResponse
 			validateResponseHeaders response
@@ -116,6 +142,7 @@ class FullFlowTest {
 		{
 			HttpRequest<?> req = HttpRequest.POST(server.URI.resolve("account/resendVerificationCode"), "").with {
 				cookie sessionCookie
+				addHeaders it
 			}
 			HttpResponse<String> response = client.toBlocking().exchange req, String
 			validateResponseHeaders response
@@ -135,6 +162,7 @@ class FullFlowTest {
 		{
 			HttpRequest<?> req = HttpRequest.POST(server.URI.resolve("account/logout"), "").with {
 				cookie sessionCookie
+				addHeaders it
 			}
 			HttpResponse<String> response = client.toBlocking().exchange req, String
 			validateResponseHeaders response
@@ -145,7 +173,9 @@ class FullFlowTest {
 
 		// Verify logged out
 		{
-			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/info"))
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/info")).with {
+				addHeaders it
+			}
 			HttpResponse<String> response = client.toBlocking().exchange(req, Argument.STRING, Argument.STRING)
 			validateResponseHeaders response
 			Assertions.assertEquals(HttpStatus.UNAUTHORIZED, response.status)
@@ -154,6 +184,7 @@ class FullFlowTest {
 		{
 			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/current")).with {
 				cookie sessionCookie
+				addHeaders it
 			}
 			HttpResponse<AccountInfoResponse> response = client.toBlocking().exchange req, AccountInfoResponse
 			validateResponseHeaders response
@@ -163,17 +194,22 @@ class FullFlowTest {
 		}
 
 		{
-			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/jwt"))
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/jwt")).with {
+				addHeaders it
+			}
 			HttpResponse<String> response = client.toBlocking().exchange(req, Argument.STRING, Argument.STRING)
 			validateResponseHeaders response
-			Assertions.assertEquals(HttpStatus.UNAUTHORIZED, response.status)
+			Assertions.assertEquals HttpStatus.UNAUTHORIZED, response.status
 		}
 
 		// Log in
 		{
 			HttpRequest<LoginRequest> req = HttpRequest.POST(
 					server.URI.resolve("account/login"),
-					new LoginRequest(email, password))
+					new LoginRequest(email, password)
+			).with {
+				addHeaders it
+			}
 
 			HttpResponse<LoginResponse> response = client.toBlocking().exchange(req, LoginResponse)
 			validateResponseHeaders response
@@ -185,6 +221,7 @@ class FullFlowTest {
 		{
 			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/info")).with {
 				cookie sessionCookie
+				addHeaders it
 			}
 			HttpResponse<AccountInfo> response = client.toBlocking().exchange req, AccountInfo
 			validateResponseHeaders response
@@ -197,6 +234,7 @@ class FullFlowTest {
 		{
 			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/jwt")).with {
 				cookie sessionCookie
+				addHeaders it
 			}
 			HttpResponse<JwtResponse> response = client.toBlocking().exchange req, JwtResponse
 			validateResponseHeaders response
@@ -219,10 +257,11 @@ class FullFlowTest {
 					new VerifyEmailRequest().tap {
 						code = 123456789
 						it.email = email
-					})
-					.with {
-						cookie sessionCookie
 					}
+			).with {
+				cookie sessionCookie
+				addHeaders it
+			}
 			HttpResponse<VerifyEmailResponse> response = client.toBlocking().exchange req, VerifyEmailResponse
 
 			VerifyEmailResponse body = response.body()
@@ -238,10 +277,11 @@ class FullFlowTest {
 					new VerifyEmailRequest().tap {
 						code = verificationCode
 						it.email = email
-					})
-					.with {
-						cookie sessionCookie
 					}
+			).with {
+				cookie sessionCookie
+				addHeaders it
+			}
 			HttpResponse<VerifyEmailResponse> response = client.toBlocking().exchange req, VerifyEmailResponse
 
 			VerifyEmailResponse body = response.body()
@@ -254,6 +294,7 @@ class FullFlowTest {
 		{
 			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/jwt")).with {
 				cookie sessionCookie
+				addHeaders it
 			}
 			HttpResponse<JwtResponse> response = client.toBlocking().exchange req, JwtResponse
 			validateResponseHeaders response
@@ -268,6 +309,121 @@ class FullFlowTest {
 			// Account is not verified, so should not have verified role
 			Assertions.assertEquals(['verified'], payload['roles'])
 		}
+
+		// Log in again to give us a secondary session key
+		Cookie sessionCookie2
+		{
+			HttpRequest<LoginRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/login"),
+					new LoginRequest(email, password)
+			).with {
+				addHeaders it
+			}
+
+			HttpResponse<LoginResponse> response = client.toBlocking().exchange(req, LoginResponse)
+			validateResponseHeaders response
+			sessionCookie2 = response.getCookie("SESSION").orElseThrow()
+		}
+
+		// Fail to change password by supplying wrong existing password.
+		{
+			HttpRequest<ChangePasswordRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/changePassword"),
+					new ChangePasswordRequest().tap {
+						existingPassword = "wrong"
+						newPassword = "p@ssw0rd2"
+					}
+			).with {
+				addHeaders it
+				cookie sessionCookie
+
+			}
+			HttpResponse<ChangePasswordResponse> response = client.toBlocking().exchange req, Argument.of(ChangePasswordResponse), Argument.of(ChangePasswordResponse)
+			validateResponseHeaders response
+			Assertions.assertFalse response.body().passwordCorrect
+		}
+		// Fail to change password by supplying invalid new password
+		{
+			HttpRequest<ChangePasswordRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/changePassword"),
+					new ChangePasswordRequest().tap {
+						existingPassword = "p@ssw0rd"
+						newPassword = "2short"
+					}
+			).with {
+				addHeaders it
+				cookie sessionCookie
+			}
+			HttpResponse<String> responseRaw = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+			log.info("Raw: ${responseRaw.body()}")
+			HttpResponse<ValidationErrorResponse> response = client.toBlocking().exchange req, Argument.of(ValidationErrorResponse), Argument.of(ValidationErrorResponse)
+			validateResponseHeaders response
+			List<ValidationErrorSingle> errors = response.body().validationErrors
+			Assertions.assertEquals 1, errors.size()
+			Assertions.assertEquals 'Password must be at least 8 characters', errors[0].message
+			Assertions.assertEquals 'changePassword.req.newPassword', errors[0].path
+			Assertions.assertEquals 'newPassword', errors[0].field
+		}
+		Cookie sessionCookie3
+		// Change password. Old token should no longer work.
+		{
+			HttpRequest<ChangePasswordRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/changePassword"),
+					new ChangePasswordRequest().tap {
+						existingPassword = "p@ssw0rd"
+						newPassword = "p@ssw0rd2"
+					}
+			).with {
+				addHeaders it
+				cookie sessionCookie
+			}
+			HttpResponse<ChangePasswordResponse> response = client.toBlocking().exchange(req, ChangePasswordResponse)
+			validateResponseHeaders response
+			Assertions.assertTrue response.body().passwordCorrect
+			sessionCookie3 = response.getCookie("SESSION").orElseThrow()
+		}
+
+		// Verify that the old cookie is no longer valid
+		{
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/current")).with {
+				cookie sessionCookie
+				addHeaders it
+			}
+			HttpResponse<AccountInfoResponse> response = client.toBlocking().exchange req, AccountInfoResponse
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+			Assertions.assertFalse response.body().loggedIn
+			Assertions.assertNull response.body().accountInfo
+		}
+		// Verify that the other old cookie is no longer valid
+		{
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/current")).with {
+				cookie sessionCookie2
+				addHeaders it
+			}
+			HttpResponse<AccountInfoResponse> response = client.toBlocking().exchange req, AccountInfoResponse
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+			Assertions.assertFalse response.body().loggedIn
+			Assertions.assertNull response.body().accountInfo
+		}
+		// Verify that the new cookie is valid
+		{
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/current")).with {
+				cookie sessionCookie3
+				addHeaders it
+			}
+			HttpResponse<AccountInfoResponse> response = client.toBlocking().exchange req, AccountInfoResponse
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+			Assertions.assertTrue response.body().loggedIn
+			Assertions.assertEquals email, response.body().accountInfo.email()
+			Assertions.assertEquals myUid, response.body().accountInfo.uid()
+		}
+
+		// TODO: forgot password reset
+
+
 	}
 
 	@Test
@@ -281,19 +437,25 @@ class FullFlowTest {
 		{
 			HttpRequest<RegisterRequest> req = HttpRequest.POST(
 					server.URI.resolve("account/register"),
-					new RegisterRequest(email, password, displayName))
+					new RegisterRequest(email, password, displayName)
+			).with {
+				addHeaders it
+			}
 
 			HttpResponse<ValidationErrorResponse> response = client.toBlocking().exchange(req, Argument.of(ValidationErrorResponse), Argument.of(ValidationErrorResponse))
 
 			Assertions.assertEquals(HttpStatus.BAD_REQUEST, response.status())
 			ValidationErrorResponse body = response.body()
-			Assertions.assertEquals(2, body.validationErrors.size())
-			Assertions.assertEquals('Must be a valid email', body.validationErrors[0].message)
-			Assertions.assertEquals('register.regRequest.email', body.validationErrors[0].path)
-			Assertions.assertEquals('email', body.validationErrors[0].field)
-			Assertions.assertEquals('Display Name must be between 2 and 64 characters', body.validationErrors[1].message)
-			Assertions.assertEquals('register.regRequest.displayName', body.validationErrors[1].path)
-			Assertions.assertEquals('displayName', body.validationErrors[1].field)
+
+			List<ValidationErrorSingle> errors = body.validationErrors
+			errors.sort { it.path }
+			Assertions.assertEquals 2, errors.size()
+			Assertions.assertEquals 'Display Name must be between 2 and 64 characters', errors[0].message
+			Assertions.assertEquals 'register.regRequest.displayName', errors[0].path
+			Assertions.assertEquals 'displayName', errors[0].field
+			Assertions.assertEquals 'Must be a valid email', errors[1].message
+			Assertions.assertEquals 'register.regRequest.email', errors[1].path
+			Assertions.assertEquals 'email', errors[1].field
 			validateResponseHeaders response
 		}
 	}
@@ -306,14 +468,11 @@ class FullFlowTest {
 	TransactionalEmailSender<Message, Void> mockSender() {
 		return new TransactionalEmailSender() {
 
-			@Override
-			String getName() {
-				return "test"
-			}
+			final String name = 'test'
 
 			@Override
 			Void send(Email email, Consumer emailRequest) throws EmailException {
-				emails.add email
+				emails << email
 				log.info "Email subject: ${email.subject}"
 				return null
 			}

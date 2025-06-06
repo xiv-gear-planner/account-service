@@ -33,10 +33,10 @@ class OracleNoSqlConnector {
 	) {
 		NoSQLHandleConfig config = new NoSQLHandleConfig(endpoint)
 		SimpleAuthenticationDetailsProvider build = auth.builder.build()
-		// TODO: easier way?
 		SignatureProvider sp = new SignatureProvider(build.tenantId, build.userId, build.fingerprint, new String(build.privateKey.readAllBytes()), null)
 		config.authorizationProvider = sp
 		config.defaultCompartment = compartmentId
+		config.configureDefaultRetryHandler 8, 1_0000
 		handle = NoSQLHandleFactory.createNoSQLHandle config
 	}
 

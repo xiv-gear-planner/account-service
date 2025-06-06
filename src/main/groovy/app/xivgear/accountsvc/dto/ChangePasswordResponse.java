@@ -1,12 +1,14 @@
 package app.xivgear.accountsvc.dto;
 
 import io.micronaut.core.annotation.Introspected;
-import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
 @Introspected(accessKind = Introspected.AccessKind.FIELD)
 @Serdeable
-public final class AccountInfoResponse {
-	public boolean loggedIn;
-	public @Nullable AccountInfo accountInfo;
+public final class ChangePasswordResponse {
+	public boolean passwordCorrect;
+
+	public ChangePasswordResponse(boolean passwordCorrect) {
+		this.passwordCorrect = passwordCorrect;
+	}
 }

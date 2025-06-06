@@ -1,4 +1,4 @@
-package app.xivgear.accountsvc;
+package app.xivgear.accountsvc.auth;
 
 import app.xivgear.accountsvc.models.UserAccount;
 

@@ -1,9 +1,10 @@
-package app.xivgear.accountsvc
+package app.xivgear.accountsvc.session
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.micronaut.context.annotation.Context
 import io.micronaut.core.annotation.NonNull
+import io.micronaut.core.order.Ordered
 import jakarta.inject.Singleton
 import org.bouncycastle.util.encoders.Hex
 
@@ -13,7 +14,7 @@ import java.security.SecureRandom
 @Singleton
 @CompileStatic
 @Slf4j
-class DummySessionTokenStore implements SessionTokenStore<Integer> {
+class DummySessionTokenStore implements SessionTokenStore<Integer>, Ordered {
 
 	private final Map<String, Integer> sessionTokens = new HashMap<>()
 
@@ -35,4 +36,13 @@ class DummySessionTokenStore implements SessionTokenStore<Integer> {
 	void invalidateSessionToken(@NonNull String token) {
 		sessionTokens.remove token
 	}
+
+	@Override
+	void invalidateAllForUser(@NonNull int uid) {
+		sessionTokens.removeAll {
+			it.value == uid
+		}
+	}
+
+	final int order = 10
 }

@@ -57,6 +57,13 @@ oci:
 oracle-nosql:
   endpoint: "https://nosql.us-sanjose-1.oci.oraclecloud.com:443/"
   compartment: ${ORACLE_CLOUD_COMPARTMENT_ID:}
+  tables:
+    users:
+      name: "users_test"
+    emails:
+      name: "emails_test"
+    sessions:
+      name: "sessions_test"
 
 smtp:
   user: ${EMAIL_USER:}

@@ -1,11 +1,11 @@
 package app.xivgear.accountsvc.controllers
 
 import app.xivgear.accountsvc.AccountOperations
-import app.xivgear.accountsvc.CredentialValidator
-import app.xivgear.accountsvc.SessionTokenStore
+import app.xivgear.accountsvc.auth.CredentialValidator
+import app.xivgear.accountsvc.auth.PasswordHasher
 import app.xivgear.accountsvc.dto.*
-import app.xivgear.accountsvc.email.VerificationCodeSender
 import app.xivgear.accountsvc.models.UserAccount
+import app.xivgear.accountsvc.session.SessionTokenStore
 import groovy.transform.CompileStatic
 import io.micronaut.context.annotation.Context
 import io.micronaut.core.annotation.Nullable
@@ -27,6 +27,7 @@ import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.annotation.security.PermitAll
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
@@ -43,18 +44,21 @@ import java.time.Duration
 @Singleton
 @CompileStatic
 @ExecuteOn(TaskExecutors.BLOCKING)
+@SecurityRequirement(name = 'AntiCsrfHeaderAuth')
 class AccountController {
 
 	private final AccountOperations accOps
 	private final SessionTokenStore<Integer> sts
 	private final CredentialValidator cv
 	private final JwtTokenGenerator jwtGen
+	private final PasswordHasher passwordHasher
 
-	AccountController(AccountOperations accOps, SessionTokenStore sts, CredentialValidator cv, JwtTokenGenerator jwtGen) {
+	AccountController(AccountOperations accOps, SessionTokenStore sts, CredentialValidator cv, JwtTokenGenerator jwtGen, PasswordHasher passwordHasher) {
 		this.accOps = accOps
 		this.sts = sts
 		this.cv = cv
 		this.jwtGen = jwtGen
+		this.passwordHasher = passwordHasher
 	}
 //
 //	@PermitAll
@@ -123,7 +127,7 @@ class AccountController {
 
 		Optional<UserAccount> userMaybe = cv.validateCredentials loginRequest.email(), loginRequest.password()
 
-		if (!userMaybe.isPresent()) {
+		if (!userMaybe.present) {
 			return HttpResponse.unauthorized()
 		}
 
@@ -218,7 +222,7 @@ class AccountController {
 	@Secured(SecurityRule.IS_AUTHENTICATED)
 	VerifyEmailResponse verifyEmail(@Body VerifyEmailRequest req, Authentication auth) {
 		var user = auth.attributes['userData'] as UserAccount
-		boolean verified = user.verifyEmail(req.email, req.code)
+		boolean verified = user.verifyEmail req.email, req.code
 		return new VerifyEmailResponse().tap {
 			it.verified = verified
 			it.accountInfo = new AccountInfo(user)
@@ -231,4 +235,26 @@ class AccountController {
 		var user = auth.attributes['userData'] as UserAccount
 		accOps.resendVerificationCode(user, user.email)
 	}
+
+	@Post("/changePassword")
+	@Secured(SecurityRule.IS_AUTHENTICATED)
+	HttpResponse<ChangePasswordResponse> changePassword(@Body @Valid ChangePasswordRequest req, Authentication auth, HttpRequest<?> request) {
+		var user = auth.attributes['userData'] as UserAccount
+		boolean existingCorrect = passwordHasher.verifyPassword req.existingPassword, user.passwordHash
+		if (existingCorrect) {
+			user.passwordHash = passwordHasher.saltAndHash req.newPassword
+			// Invalidate old token then get new token
+			sts.invalidateAllForUser user.id
+			String token = sts.createSessionToken user.id
+
+			Cookie sessionCookie = createSessionCookie token, request.secure
+
+			return HttpResponse.ok(new ChangePasswordResponse(true))
+					.cookie(sessionCookie)
+		}
+		else {
+			return HttpResponse.<ChangePasswordResponse>unauthorized().body(new ChangePasswordResponse(false))
+		}
+	}
+
 }

@@ -1,4 +1,5 @@
-package app.xivgear.accountsvc
+package app.xivgear.accountsvc.session
+
 
 import io.micronaut.core.annotation.NonNull
 import io.micronaut.http.HttpRequest
@@ -13,7 +14,7 @@ interface SessionTokenStore<X> {
 	 * @return Optional containing the user identity if the token is valid
 	 */
 	@NonNull
-	Optional<X> validateSessionToken(@NonNull String token);
+	Optional<X> validateSessionToken(@NonNull String token)
 
 	/**
 	 * Creates and stores a new session token for the given user.
@@ -22,14 +23,21 @@ interface SessionTokenStore<X> {
 	 * @return The new session token to be stored in a cookie
 	 */
 	@NonNull
-	String createSessionToken(@NonNull X user);
+	String createSessionToken(@NonNull X user)
 
 	/**
 	 * Invalidates a session token (e.g., for logout).
 	 *
 	 * @param token The session token to invalidate
 	 */
-	void invalidateSessionToken(@NonNull String token);
+	void invalidateSessionToken(@NonNull String token)
+
+	/**
+	 * Invalidate all session tokens for a user (e.g. user changed password)
+	 *
+	 * @param uid The user ID for whom to invalidate tokens
+	 */
+	void invalidateAllForUser(@NonNull int uid)
 
 	/**
 	 * Optional hook to extract the session token from a request (e.g., cookie lookup).

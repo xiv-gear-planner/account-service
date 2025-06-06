@@ -1,5 +1,6 @@
-package app.xivgear.accountsvc
+package app.xivgear.accountsvc.session
 
+import app.xivgear.accountsvc.AccountOperations
 import app.xivgear.accountsvc.models.UserAccount
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
