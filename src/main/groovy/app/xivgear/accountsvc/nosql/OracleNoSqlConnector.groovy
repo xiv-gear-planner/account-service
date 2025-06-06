@@ -1,6 +1,5 @@
 package app.xivgear.accountsvc.nosql
 
-
 import com.oracle.bmc.auth.SimpleAuthenticationDetailsProvider
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -10,13 +9,11 @@ import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import io.micronaut.oraclecloud.core.OracleCloudAuthConfigurationProperties
 import jakarta.inject.Singleton
-import oracle.nosql.driver.AuthorizationProvider
 import oracle.nosql.driver.NoSQLHandle
 import oracle.nosql.driver.NoSQLHandleConfig
 import oracle.nosql.driver.NoSQLHandleFactory
 import oracle.nosql.driver.iam.SignatureProvider
 import oracle.nosql.driver.kv.StoreAccessTokenProvider
-import oracle.nosql.driver.ops.Request
 
 /**
  * Reads configuration and produces a NoSQLHandle.
