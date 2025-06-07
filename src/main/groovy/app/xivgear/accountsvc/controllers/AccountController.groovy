@@ -9,6 +9,7 @@ import app.xivgear.accountsvc.session.SessionTokenStore
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.micronaut.context.annotation.Context
+import io.micronaut.context.annotation.Property
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
@@ -32,6 +33,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.annotation.security.PermitAll
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Null
 
 import java.time.Duration
 
@@ -49,13 +51,22 @@ import java.time.Duration
 @Slf4j
 class AccountController {
 
+	private final @Nullable String cookieDomain
 	private final AccountOperations accOps
 	private final SessionTokenStore<Integer> sts
 	private final CredentialValidator cv
 	private final JwtTokenGenerator jwtGen
 	private final PasswordHasher passwordHasher
 
-	AccountController(AccountOperations accOps, SessionTokenStore sts, CredentialValidator cv, JwtTokenGenerator jwtGen, PasswordHasher passwordHasher) {
+	AccountController(
+			@Nullable @Property(name = 'xivgear.accountService.cookieDomain') String cookieDomain,
+			AccountOperations accOps,
+			SessionTokenStore sts,
+			CredentialValidator cv,
+			JwtTokenGenerator jwtGen,
+			PasswordHasher passwordHasher
+	) {
+		this.cookieDomain = cookieDomain
 		this.accOps = accOps
 		this.sts = sts
 		this.cv = cv
@@ -76,18 +87,18 @@ class AccountController {
 	 * @param isSecure Whether the connection is secure
 	 * @return The cookie
 	 */
-	static Cookie createSessionCookie(String token, String origin) {
+	Cookie createSessionCookie(String token, String origin) {
 		return createAuthCookie("SESSION", token, origin)
 	}
 
-	static Cookie createAuthCookie(String key, String value, String origin) {
+	Cookie createAuthCookie(String key, String value, String origin) {
 		return Cookie.of(key, value).with {
 			httpOnly true
 			secure true
 			sameSite SameSite.None
 			path "/"
 			maxAge Duration.ofDays(90)
-			domain origin
+			domain (cookieDomain ?: origin)
 		}
 	}
 

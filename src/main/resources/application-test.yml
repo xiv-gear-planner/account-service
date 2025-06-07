@@ -34,3 +34,7 @@ oracle-nosql:
 #        starttls:
 #          enable: true
 #        host: ${EMAIL_HOST:`smtp.email.us-sanjose-1.oci.oraclecloud.com`}
+
+xivgear:
+  accountService:
+    cookieDomain: 'testdomain.local'

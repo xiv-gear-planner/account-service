@@ -29,3 +29,7 @@ oracle-nosql:
 smtp:
   user: ${EMAIL_USER}
   password: ${EMAIL_PASSWORD}
+
+xivgear:
+  accountService:
+    cookieDomain: ".xivgear.app"
