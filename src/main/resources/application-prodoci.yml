@@ -15,6 +15,7 @@ oci:
   region: ${ORACLE_CLOUD_OBJECT_STORAGE_REGION}
 
 oracle-nosql:
+  createTables: ${ORACLE_CLOUD_NOSQL_CREATE_TABLES:false}
   tables:
     users:
       name: "users"
