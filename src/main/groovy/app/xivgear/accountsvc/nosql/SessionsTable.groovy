@@ -48,7 +48,7 @@ Primary Key( Shard( ${session_key} ) ) ) USING TTL 365 days
 	}
 
 	@Override
-	protected List<String> getTableIndicesDdl() {
-		return ["CREATE INDEX IF NOT EXISTS uid_index ON ${tableName}(${owner_uid})".toString()]
+	protected Map<String, SessionCol> getTableIndicesDdl() {
+		return [uid_index: owner_uid]
 	}
 }

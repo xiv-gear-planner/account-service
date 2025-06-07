@@ -6,6 +6,7 @@ import io.micronaut.context.annotation.Property
 import io.micronaut.core.annotation.Nullable
 import jakarta.annotation.PostConstruct
 import oracle.nosql.driver.NoSQLHandle
+import oracle.nosql.driver.TableNotFoundException
 import oracle.nosql.driver.ops.*
 import oracle.nosql.driver.values.FieldValue
 import oracle.nosql.driver.values.MapValue
@@ -250,33 +251,46 @@ abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 	}
 
 	protected void initTable() {
-
-		{
-			log.info "Table create: ${tableDdl}"
+		// Check if table exists first
+		try {
+			handle.getTable(new GetTableRequest().tap {
+				tableName = this.tableName
+			})
+			log.info "Table ${tableDdl} already exists"
+		}
+		catch (TableNotFoundException ignored) {
+			log.info "Table not found, will create: ${tableDdl}"
 			var tr = new TableRequest().tap {
 				statement = tableDdl
 				tableLimits = Objects.requireNonNull this.tableLimits
 			}
 			TableResult result = handle.tableRequest tr
-			result.waitForCompletion(handle, 30_000, 500)
+			result.waitForCompletion handle, 30_000, 500
 		}
 
-		tableIndicesDdl.each { String indexDdl ->
-			log.info "Index create: ${indexDdl}"
+		Set<String> existing = handle.getIndexes(new GetIndexesRequest().tap {
+			tableName = this.tableName
+		}).indexes.collect { it.indexName }.toSet()
+
+		tableIndicesDdl.each { entry ->
+			String indexName = entry.key
+			if (existing.contains(indexName)) {
+				log.info "Index ${indexName} already exists"
+				return
+			}
+			log.info "Index create: ${indexName} -> ${entry.value}"
 			var itr = new TableRequest().tap {
-				statement = indexDdl
+				statement = "CREATE INDEX IF NOT EXISTS ${indexName} ON ${this.tableName}(${entry.value})"
 			}
 			TableResult result = handle.tableRequest itr
-			result.waitForCompletion(handle, 30_000, 500)
-
+			result.waitForCompletion handle, 30_000, 500
 		}
-
 	}
 
 	protected abstract TableLimits getTableLimits()
 
 	protected abstract String getTableDdl()
 
-	protected abstract List<String> getTableIndicesDdl()
+	protected abstract Map<String, ColType> getTableIndicesDdl()
 
 }

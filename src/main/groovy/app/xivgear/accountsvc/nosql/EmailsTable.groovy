@@ -57,7 +57,7 @@ PRIMARY KEY(SHARD(${email})))
 	}
 
 	@Override
-	protected List<String> getTableIndicesDdl() {
-		return ["CREATE INDEX IF NOT EXISTS email_owner_index ON ${tableName}(${owner_uid})".toString()]
+	protected Map<String, EmailCol> getTableIndicesDdl() {
+		return [email_owner_index: owner_uid]
 	}
 }

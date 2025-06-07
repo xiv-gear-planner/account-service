@@ -55,9 +55,11 @@ PRIMARY KEY(SHARD(${user_id}))
 	}
 
 	@Override
-	protected List<String> getTableIndicesDdl() {
-		return ["CREATE INDEX IF NOT EXISTS email_index ON ${tableName}(${email})".toString(),
-				"CREATE INDEX IF NOT EXISTS display_name_index ON ${tableName}(${display_name})".toString()]
+	protected Map<String, UserCol> getTableIndicesDdl() {
+		return [
+		        email_index: email,
+				display_name_index: display_name
+		]
 	}
 
 	@Override
