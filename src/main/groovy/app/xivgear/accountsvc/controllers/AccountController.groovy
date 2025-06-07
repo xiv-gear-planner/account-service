@@ -269,13 +269,19 @@ class AccountController {
 					.cookie(sessionCookie)
 		}
 		else {
-			return HttpResponse.<ChangePasswordResponse>unauthorized().body(new ChangePasswordResponse(false))
+			return HttpResponse.<ChangePasswordResponse> unauthorized().body(new ChangePasswordResponse(false))
 		}
 	}
 
-	private static @Nullable String getOrigin(HttpRequest<?> req) {
+	private static @Nullable
+	String getOrigin(HttpRequest<?> req) {
 		if (req.origin.present) {
-			return req.origin.get()
+			String rawOrigin = req.origin.get()
+			String host = new URI(rawOrigin).host
+			if (host == null) {
+				log.warn "Bad origin: ${rawOrigin} for ${req.method} ${req.uri}"
+			}
+			return host
 		}
 		log.warn "Missing origin header for ${req.method} ${req.uri}"
 		return null

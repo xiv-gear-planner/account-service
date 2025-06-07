@@ -55,7 +55,7 @@ class FullFlowTest {
 
 	static <X> MutableHttpRequest<X> addHeaders(MutableHttpRequest<X> req) {
 		req.header "xivgear-csrf", "1"
-		req.header "Origin", "foo.bar.com"
+		req.header "Origin", "https://foo.bar.com/"
 	}
 
 	@Test
