@@ -43,7 +43,7 @@ class EmailsTable extends RawNoSqlTable<EmailCol, String> {
 
 	@Override
 	protected TableLimits getTableLimits() {
-		return null
+		return new TableLimits(25, 5, 1)
 	}
 
 	@Override

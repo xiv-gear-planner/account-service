@@ -255,7 +255,7 @@ abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 			log.info "Table create: ${tableDdl}"
 			var tr = new TableRequest().tap {
 				statement = tableDdl
-				tableLimits = this.tableLimits
+				tableLimits = Objects.requireNonNull this.tableLimits
 			}
 			TableResult result = handle.tableRequest tr
 			result.waitForCompletion(handle, 30_000, 500)
