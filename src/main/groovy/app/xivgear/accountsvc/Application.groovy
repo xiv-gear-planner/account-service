@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme
 @CompileStatic
 class Application {
 	static void main(String[] args) {
-		Micronaut.build(args).defaultEnvironments("local").mainClass(Application).start()
-//		Micronaut.run Application, args
+		Micronaut.run Application, args
 	}
 }

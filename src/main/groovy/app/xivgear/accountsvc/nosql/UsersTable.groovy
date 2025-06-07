@@ -6,8 +6,6 @@ import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
 import oracle.nosql.driver.NoSQLHandle
 import oracle.nosql.driver.ops.TableLimits
-import oracle.nosql.driver.ops.TableRequest
-import oracle.nosql.driver.ops.TableResult
 import oracle.nosql.driver.values.FieldValue
 import oracle.nosql.driver.values.IntegerValue
 
@@ -57,7 +55,7 @@ PRIMARY KEY(SHARD(${user_id}))
 	@Override
 	protected Map<String, UserCol> getTableIndicesDdl() {
 		return [
-		        email_index: email,
+				email_index       : email,
 				display_name_index: display_name
 		]
 	}

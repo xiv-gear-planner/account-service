@@ -14,7 +14,7 @@ import io.micronaut.http.filter.ServerFilterChain
 import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
 
-@Filter("/**")
+@Filter("/account/**")
 @Singleton
 @CompileStatic
 @Context

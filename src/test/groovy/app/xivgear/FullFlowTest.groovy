@@ -67,14 +67,14 @@ class FullFlowTest {
 		Assertions.assertEquals(HttpStatus.UNAUTHORIZED, response.status)
 	}
 
+	/**
+	 * Test that if you don't supply the xivgear-csrf header, the request is rejected.
+	 */
 	@Test
 	void testRejectMissingHeader() {
-		HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/info")).with {
-			addHeaders it
-		}
+		HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/current"))
 		HttpResponse<String> response = client.toBlocking().exchange(req, Argument.STRING, Argument.STRING)
-		validateResponseHeaders response
-		Assertions.assertEquals(HttpStatus.UNAUTHORIZED, response.status)
+		Assertions.assertEquals(HttpStatus.FORBIDDEN, response.status)
 	}
 
 	@Test

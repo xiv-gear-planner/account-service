@@ -41,20 +41,6 @@ class OracleNoSqlConnector {
 	@Requires(property = 'oracle-nosql.mode', value = 'local')
 	NoSQLHandle localNoSqlHandle() {
 		NoSQLHandleConfig config = base()
-//		if (true) {
-//			config.authorizationProvider = new AuthorizationProvider() {
-//				@Override
-//				String getAuthorizationString(Request request) {
-//					return "Bearer exampleId"
-//				}
-//
-//				@Override
-//				void close() {
-//
-//				}
-//			}
-//		}
-//		config.authorizationProvider = null
 		config.authorizationProvider = new StoreAccessTokenProvider()
 		NoSQLHandle handle = NoSQLHandleFactory.createNoSQLHandle(config)
 		return handle

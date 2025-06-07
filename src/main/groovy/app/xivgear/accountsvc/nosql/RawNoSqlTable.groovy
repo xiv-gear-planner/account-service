@@ -19,6 +19,7 @@ abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 	protected final String primaryKeyColName
 	protected final String tableName
 	protected final NoSQLHandle handle
+	private boolean initialized
 
 	protected abstract FieldValue pkToFieldValue(PkType pk)
 
@@ -248,6 +249,11 @@ abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 			log.info "init table ${tableName}"
 			initTable()
 		}
+		initialized = true
+	}
+
+	boolean isInitialized() {
+		return this.initialized
 	}
 
 	protected void initTable() {
