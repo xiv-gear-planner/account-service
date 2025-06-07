@@ -81,7 +81,7 @@ class AccountController {
 	static Cookie createAuthCookie(String key, String value, boolean isSecure) {
 		return Cookie.of(key, value).with {
 			httpOnly true
-			secure isSecure
+			secure true
 			sameSite SameSite.None
 			path "/"
 			maxAge Duration.ofDays(90)
@@ -150,7 +150,7 @@ class AccountController {
 	@Secured(SecurityRule.IS_AUTHENTICATED)
 	HttpResponse<?> logout(HttpRequest<?> request) {
 		Optional<String> token = sts.extractTokenFromRequest request
-		if (token.isPresent()) {
+		if (token.present) {
 			sts.invalidateSessionToken token.get()
 			return HttpResponse.status(HttpStatus.OK)
 					.cookie(Cookie.of("SESSION", "").with {
