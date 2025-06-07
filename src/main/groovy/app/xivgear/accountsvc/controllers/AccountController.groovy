@@ -7,6 +7,7 @@ import app.xivgear.accountsvc.dto.*
 import app.xivgear.accountsvc.models.UserAccount
 import app.xivgear.accountsvc.session.SessionTokenStore
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import io.micronaut.context.annotation.Context
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.http.HttpRequest
@@ -45,6 +46,7 @@ import java.time.Duration
 @CompileStatic
 @ExecuteOn(TaskExecutors.BLOCKING)
 @SecurityRequirement(name = 'AntiCsrfHeaderAuth')
+@Slf4j
 class AccountController {
 
 	private final AccountOperations accOps
@@ -273,8 +275,9 @@ class AccountController {
 
 	private static @Nullable String getOrigin(HttpRequest<?> req) {
 		if (req.origin.present) {
-			return new URI(req.origin.get()).host
+			return req.origin.get()
 		}
+		log.warn "Missing origin header for ${req.method} ${req.uri}"
 		return null
 	}
 }
