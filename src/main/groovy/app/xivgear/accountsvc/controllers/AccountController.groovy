@@ -74,17 +74,18 @@ class AccountController {
 	 * @param isSecure Whether the connection is secure
 	 * @return The cookie
 	 */
-	static Cookie createSessionCookie(String token, boolean isSecure) {
-		return createAuthCookie("SESSION", token, isSecure)
+	static Cookie createSessionCookie(String token, String origin) {
+		return createAuthCookie("SESSION", token, origin)
 	}
 
-	static Cookie createAuthCookie(String key, String value, boolean isSecure) {
+	static Cookie createAuthCookie(String key, String value, String origin) {
 		return Cookie.of(key, value).with {
 			httpOnly true
 			secure true
 			sameSite SameSite.None
 			path "/"
 			maxAge Duration.ofDays(90)
+			domain origin
 		}
 	}
 
@@ -106,9 +107,13 @@ class AccountController {
 			)
 	)
 	HttpResponse<RegisterResponse> register(@Body @Valid RegisterRequest regRequest, HttpRequest<?> req) {
+		String origin = getOrigin req
+		if (origin == null) {
+			return HttpResponse.badRequest()
+		}
 		int user = accOps.addUser regRequest.email(), regRequest.displayName(), regRequest.password()
 		String token = sts.createSessionToken user
-		Cookie sessionCookie = createSessionCookie token, req.secure
+		Cookie sessionCookie = createSessionCookie token, origin
 		return HttpResponse.ok(new RegisterResponse(user)).with {
 			cookie sessionCookie
 		}
@@ -125,6 +130,11 @@ class AccountController {
 	@Post("/login")
 	HttpResponse<LoginResponse> login(@Body LoginRequest loginRequest, HttpRequest<?> request) {
 
+		String origin = getOrigin request
+		if (origin == null) {
+			return HttpResponse.badRequest()
+		}
+
 		Optional<UserAccount> userMaybe = cv.validateCredentials loginRequest.email(), loginRequest.password()
 
 		if (!userMaybe.present) {
@@ -134,7 +144,7 @@ class AccountController {
 		UserAccount user = userMaybe.get()
 		String token = sts.createSessionToken user.id
 
-		Cookie sessionCookie = createSessionCookie token, request.secure
+		Cookie sessionCookie = createSessionCookie token, origin
 
 		return HttpResponse.ok(new LoginResponse(new AccountInfo(user), "Login successful"))
 				.cookie(sessionCookie)
@@ -239,6 +249,10 @@ class AccountController {
 	@Post("/changePassword")
 	@Secured(SecurityRule.IS_AUTHENTICATED)
 	HttpResponse<ChangePasswordResponse> changePassword(@Body @Valid ChangePasswordRequest req, Authentication auth, HttpRequest<?> request) {
+		String origin = getOrigin(request)
+		if (origin == null) {
+			return HttpResponse.badRequest()
+		}
 		var user = auth.attributes['userData'] as UserAccount
 		boolean existingCorrect = passwordHasher.verifyPassword req.existingPassword, user.passwordHash
 		if (existingCorrect) {
@@ -247,7 +261,7 @@ class AccountController {
 			sts.invalidateAllForUser user.id
 			String token = sts.createSessionToken user.id
 
-			Cookie sessionCookie = createSessionCookie token, request.secure
+			Cookie sessionCookie = createSessionCookie token, origin
 
 			return HttpResponse.ok(new ChangePasswordResponse(true))
 					.cookie(sessionCookie)
@@ -257,4 +271,10 @@ class AccountController {
 		}
 	}
 
+	private static @Nullable String getOrigin(HttpRequest<?> req) {
+		if (req.origin.present) {
+			return new URI(req.origin.get()).host
+		}
+		return null
+	}
 }
