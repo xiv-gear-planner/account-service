@@ -251,6 +251,32 @@ abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 
 	protected void initTable() {
 
+		{
+			log.info "Table create: ${tableDdl}"
+			var tr = new TableRequest().tap {
+				statement = tableDdl
+				tableLimits = this.tableLimits
+			}
+			TableResult result = handle.tableRequest tr
+			result.waitForCompletion(handle, 30_000, 500)
+		}
+
+		tableIndicesDdl.each { String indexDdl ->
+			log.info "Index create: ${indexDdl}"
+			var itr = new TableRequest().tap {
+				statement = indexDdl
+			}
+			TableResult result = handle.tableRequest itr
+			result.waitForCompletion(handle, 30_000, 500)
+
+		}
+
 	}
+
+	protected abstract TableLimits getTableLimits()
+
+	protected abstract String getTableDdl()
+
+	protected abstract List<String> getTableIndicesDdl()
 
 }

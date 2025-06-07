@@ -5,6 +5,7 @@ import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
 import oracle.nosql.driver.NoSQLHandle
+import oracle.nosql.driver.ops.TableLimits
 import oracle.nosql.driver.ops.TableRequest
 import oracle.nosql.driver.ops.TableResult
 import oracle.nosql.driver.values.FieldValue
@@ -29,10 +30,8 @@ class UsersTable extends RawNoSqlTable<UserCol, Integer> {
 	*/
 
 
-	UsersTable(
-			@Property(name = 'oracle-nosql.tables.users.name') String tableName,
-			NoSQLHandle handle
-	) {
+	UsersTable(@Property(name = 'oracle-nosql.tables.users.name') String tableName,
+			   NoSQLHandle handle) {
 		super(tableName, user_id, handle)
 	}
 
@@ -42,8 +41,8 @@ class UsersTable extends RawNoSqlTable<UserCol, Integer> {
 	}
 
 	@Override
-	protected void initTable() {
-		String ddl = """CREATE TABLE IF NOT EXISTS ${tableName} (
+	protected String getTableDdl() {
+		return """CREATE TABLE IF NOT EXISTS ${tableName} (
 ${user_id} INTEGER GENERATED ALWAYS AS IDENTITY ( START WITH 1 INCREMENT BY 1 MAXVALUE 2147483647 MINVALUE -2147483648 CACHE 1000 ), 
 ${display_name} STRING, 
 ${email} STRING, 
@@ -53,16 +52,17 @@ ${password_hash} STRING,
 PRIMARY KEY(SHARD(${user_id}))
 )
 """
-
-		String incides = """
-CREATE INDEX IF NOT EXISTS email_index ON ${tableName}(${email});
-CREATE INDEX IF NOT EXISTS display_name_index ON ${tableName}(${display_name});
-"""
-
-		var tr = new TableRequest().tap {
-			statement = ddl
-		}
-		TableResult result = handle.tableRequest(tr)
-		result.waitForCompletion(handle, 30_000, 500)
 	}
+
+	@Override
+	protected List<String> getTableIndicesDdl() {
+		return ["CREATE INDEX IF NOT EXISTS email_index ON ${tableName}(${email})".toString(),
+				"CREATE INDEX IF NOT EXISTS display_name_index ON ${tableName}(${display_name})".toString()]
+	}
+
+	@Override
+	protected TableLimits getTableLimits() {
+		return new TableLimits(25, 5, 1)
+	}
+
 }

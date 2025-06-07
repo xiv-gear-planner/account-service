@@ -5,12 +5,12 @@ import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
 import oracle.nosql.driver.NoSQLHandle
-import oracle.nosql.driver.ops.TableRequest
-import oracle.nosql.driver.ops.TableResult
+import oracle.nosql.driver.ops.TableLimits
 import oracle.nosql.driver.values.FieldValue
 import oracle.nosql.driver.values.StringValue
 
-import static app.xivgear.accountsvc.nosql.SessionCol.*
+import static app.xivgear.accountsvc.nosql.SessionCol.owner_uid
+import static app.xivgear.accountsvc.nosql.SessionCol.session_key
 
 @Context
 @Singleton
@@ -32,23 +32,23 @@ class SessionsTable extends RawNoSqlTable<SessionCol, String> {
 		return new StringValue(pk)
 	}
 
+
 	@Override
-	protected void initTable() {
-		String ddl = """CREATE TABLE IF NOT EXISTS ${tableName} ( 
+	protected TableLimits getTableLimits() {
+		return new TableLimits(25, 5, 1)
+	}
+
+	@Override
+	protected String getTableDdl() {
+		return """CREATE TABLE IF NOT EXISTS ${tableName} ( 
 ${session_key} String , 
 ${owner_uid} Integer DEFAULT -1 NOT NULL , 
 Primary Key( Shard( ${session_key} ) ) ) USING TTL 365 days
 """
+	}
 
-//		String incides = """
-//CREATE INDEX IF NOT EXISTS email_index ON ${tableName}(${email});
-//CREATE INDEX IF NOT EXISTS display_name_index ON ${tableName}(${display_name});
-//"""
-
-		var tr = new TableRequest().tap {
-			statement = ddl
-		}
-		TableResult result = handle.tableRequest(tr)
-		result.waitForCompletion(handle, 30_000, 500)
+	@Override
+	protected List<String> getTableIndicesDdl() {
+		return ["CREATE INDEX IF NOT EXISTS uid_index ON ${tableName}(${owner_uid})".toString()]
 	}
 }

@@ -5,20 +5,11 @@ import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
 import oracle.nosql.driver.NoSQLHandle
-import oracle.nosql.driver.ops.TableRequest
-import oracle.nosql.driver.ops.TableResult
+import oracle.nosql.driver.ops.TableLimits
 import oracle.nosql.driver.values.FieldValue
 import oracle.nosql.driver.values.StringValue
 
-import static app.xivgear.accountsvc.nosql.UserCol.display_name
-import static app.xivgear.accountsvc.nosql.UserCol.display_name
-import static app.xivgear.accountsvc.nosql.UserCol.email
-import static app.xivgear.accountsvc.nosql.UserCol.email
-import static app.xivgear.accountsvc.nosql.UserCol.is_verified
-import static app.xivgear.accountsvc.nosql.UserCol.password_hash
-import static app.xivgear.accountsvc.nosql.UserCol.roles
-import static app.xivgear.accountsvc.nosql.UserCol.user_id
-import static app.xivgear.accountsvc.nosql.UserCol.user_id
+import static app.xivgear.accountsvc.nosql.EmailCol.*
 
 @Context
 @Singleton
@@ -42,7 +33,7 @@ class EmailsTable extends RawNoSqlTable<EmailCol, String> {
 			@Property(name = 'oracle-nosql.tables.emails.name') String tableName,
 			NoSQLHandle handle
 	) {
-		super(tableName, EmailCol.email, handle)
+		super(tableName, email, handle)
 	}
 
 	@Override
@@ -51,21 +42,22 @@ class EmailsTable extends RawNoSqlTable<EmailCol, String> {
 	}
 
 	@Override
-	protected void initTable() {
-		String ddl = """CREATE TABLE IF NOT EXISTS ${tableName} (
-email STRING, owner_uid INTEGER NOT NULL DEFAULT -1, verified BOOLEAN NOT NULL DEFAULT false, verification_code INTEGER, 
-PRIMARY KEY(SHARD(email)))
-"""
+	protected TableLimits getTableLimits() {
+		return null
+	}
 
-		String incides = """
-CREATE INDEX IF NOT EXISTS email_index ON ${tableName}(${email});
-CREATE INDEX IF NOT EXISTS display_name_index ON ${tableName}(${display_name});
+	@Override
+	protected String getTableDdl() {
+		return """CREATE TABLE IF NOT EXISTS ${tableName} (
+${email} STRING, owner_uid INTEGER NOT NULL DEFAULT -1,
+${verified} BOOLEAN NOT NULL DEFAULT false, 
+${verification_code} INTEGER, 
+PRIMARY KEY(SHARD(${email})))
 """
+	}
 
-		var tr = new TableRequest().tap {
-			statement = ddl
-		}
-		TableResult result = handle.tableRequest(tr)
-		result.waitForCompletion(handle, 30_000, 500)
+	@Override
+	protected List<String> getTableIndicesDdl() {
+		return ["CREATE INDEX IF NOT EXISTS email_owner_index ON ${tableName}(${owner_uid})".toString()]
 	}
 }
