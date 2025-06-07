@@ -95,7 +95,7 @@ class AccountController {
 		return Cookie.of(key, value).with {
 			httpOnly true
 			secure true
-			sameSite SameSite.None
+			sameSite SameSite.Lax
 			path "/"
 			maxAge Duration.ofDays(90)
 			domain (cookieDomain ?: origin)
