@@ -83,6 +83,9 @@ class AccountOperations implements CredentialValidator {
 	@Nullable
 	UserAccount getByEmail(String email) {
 		MapValue row = usersTable.queryOne([(UserCol.email): new StringValue(email)])
+		if (row == null) {
+			return null
+		}
 		return new OracleUserAccount(row, usersTable, emailsTable)
 	}
 

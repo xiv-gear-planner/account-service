@@ -32,6 +32,7 @@ micronaut:
   #
 
   server:
+#    host: 0.0.0.0
     cors:
       enabled: true
   openapi:

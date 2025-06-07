@@ -82,7 +82,7 @@ class AccountController {
 		return Cookie.of(key, value).with {
 			httpOnly true
 			secure isSecure
-			sameSite SameSite.Lax
+			sameSite SameSite.None
 			path "/"
 			maxAge Duration.ofDays(90)
 		}
