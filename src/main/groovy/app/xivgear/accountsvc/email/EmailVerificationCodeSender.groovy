@@ -25,7 +25,11 @@ class EmailVerificationCodeSender implements VerificationCodeSender {
 			body("""\
 			Welcome to Xivgear.app
 
-			Your verification code is ${code}. You can enter this code on the account management screen.
+			Your verification code is:
+			
+			${code}
+
+			You can enter this code on the account management screen.
 
 			Happy Gearing!
 			""".stripIndent())
