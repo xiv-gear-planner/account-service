@@ -15,9 +15,9 @@ import oracle.nosql.driver.values.MapValue
 @Slf4j
 abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 
+	final String tableName
 	protected final ColType primaryKeyCol
 	protected final String primaryKeyColName
-	protected final String tableName
 	protected final NoSQLHandle handle
 	private boolean initialized
 
@@ -248,6 +248,9 @@ abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 		if (create) {
 			log.info "init table ${tableName}"
 			initTable()
+		}
+		else {
+			log.info "init disabled for table ${tableName}"
 		}
 		initialized = true
 	}

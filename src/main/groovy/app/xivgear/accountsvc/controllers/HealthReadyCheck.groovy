@@ -2,6 +2,7 @@ package app.xivgear.accountsvc.controllers
 
 import app.xivgear.accountsvc.nosql.RawNoSqlTable
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
@@ -16,6 +17,7 @@ import jakarta.annotation.security.PermitAll
 @CompileStatic
 @Context
 @PermitAll
+@Slf4j
 class HealthReadyCheck {
 	@SuppressWarnings(['GrMethodMayBeStatic'])
 	@Operation(summary = "Health Check")
@@ -30,13 +32,14 @@ class HealthReadyCheck {
 	@Get("/readyz")
 	@Produces(MediaType.TEXT_PLAIN)
 	HttpResponse<String> readyCheck(List<RawNoSqlTable> tables) {
-		if (tables.every { it.initialized }) {
-			return HttpResponse.ok("Ready")
+		tables.forEach {
+			if (!it.initialized) {
+				log.info "Table ${it.tableName} not initialized"
+				return HttpResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
+						.body("Not Ready")
+			}
 		}
-		else {
-			return HttpResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
-					.body("Not Ready")
-		}
+		return HttpResponse.ok("Ready")
 	}
 
 }
