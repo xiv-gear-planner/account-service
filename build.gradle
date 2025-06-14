@@ -57,11 +57,11 @@ java {
 graalvmNative.toolchainDetection = false
 
 micronaut {
-	runtime("jetty")
-	testRuntime("junit5")
+	runtime "netty"
+	testRuntime "junit5"
 	processing {
-		incremental(true)
-		annotations("app.xivgear.*")
+		incremental true
+		annotations "app.xivgear.*"
 	}
 	aot {
 		// Please review carefully the optimizations enabled below

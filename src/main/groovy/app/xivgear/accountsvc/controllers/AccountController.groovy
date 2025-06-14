@@ -33,7 +33,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import jakarta.annotation.security.PermitAll
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
-import jakarta.validation.constraints.Null
 
 import java.time.Duration
 
@@ -51,7 +50,8 @@ import java.time.Duration
 @Slf4j
 class AccountController {
 
-	private final @Nullable String cookieDomain
+	private final @Nullable
+	String cookieDomain
 	private final AccountOperations accOps
 	private final SessionTokenStore<Integer> sts
 	private final CredentialValidator cv
@@ -98,7 +98,7 @@ class AccountController {
 			sameSite SameSite.Lax
 			path "/"
 			maxAge Duration.ofDays(90)
-			domain (cookieDomain ?: origin)
+			domain(cookieDomain ?: origin)
 		}
 	}
 
