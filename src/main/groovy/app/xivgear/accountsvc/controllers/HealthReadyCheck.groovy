@@ -46,7 +46,6 @@ class HealthReadyCheck {
 		// all of the dependencies are already up
 		var tables = ctx.getBeansOfType RawNoSqlTable
 		tables.forEach {
-			log.info(it.tableName)
 			if (!it.initialized) {
 				log.info "Table ${it.tableName} not initialized"
 				return HttpResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
