@@ -10,7 +10,7 @@ class IpAddressResolver {
 
 	String resolveIp(HttpRequest<?> request) {
 		return request.headers
-				.get("CF-Connecting-IP", String)
+				.get("CF-Connecting-IP")
 				?: request.remoteAddress.address.hostAddress.toString()
 	}
 

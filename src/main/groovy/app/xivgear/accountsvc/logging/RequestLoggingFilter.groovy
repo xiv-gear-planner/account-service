@@ -28,6 +28,7 @@ class RequestLoggingFilter implements Ordered, HttpServerFilter {
 		Publisher<MutableHttpResponse<?>> responsePublisher = chain.proceed request
 		return Publishers.<MutableHttpResponse<?>, MutableHttpResponse<?>> map(responsePublisher, { response ->
 			try {
+				MDC.put "ip", ipAddress
 				log.info("{} {}: {}",
 						request.method,
 						request.path,
