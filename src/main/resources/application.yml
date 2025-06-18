@@ -26,9 +26,17 @@ micronaut:
     enabled: true
     authentication: session
 
-  session:
-    filter:
-      enabled: true
+    intercept-url-map:
+      - pattern: /swagger/**
+        access:
+          - isAnonymous()
+      - pattern: /swagger-ui/**
+        access:
+          - isAnonymous()
+
+#  session:
+#    filter:
+#      enabled: true
   #
 
   server:

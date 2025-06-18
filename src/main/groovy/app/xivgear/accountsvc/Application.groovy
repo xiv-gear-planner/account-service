@@ -1,5 +1,7 @@
 package app.xivgear.accountsvc
 
+import app.xivgear.logging.IpAddressResolver
+import app.xivgear.logging.RequestLoggingFilter
 import groovy.transform.CompileStatic
 import io.micronaut.runtime.Micronaut
 import io.swagger.v3.oas.annotations.OpenAPIDefinition
@@ -24,6 +26,9 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme
 @CompileStatic
 class Application {
 	static void main(String[] args) {
-		Micronaut.run Application, args
+		Micronaut.build(args).with {
+			it.args args
+			packages 'app.xivgear.logging'
+		}.start()
 	}
 }

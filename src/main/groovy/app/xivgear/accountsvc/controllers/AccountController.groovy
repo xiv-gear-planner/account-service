@@ -233,7 +233,7 @@ class AccountController {
 				'userId': user.id,
 		] as Map<String, Object>
 		Optional<String> token = jwtGen.generateToken minAuth, 30 * 60
-		if (token.isPresent()) {
+		if (token.present) {
 			return HttpResponse.ok(new JwtResponse(token.get()))
 		}
 		else {

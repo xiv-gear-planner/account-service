@@ -1,2 +1,4 @@
 rootProject.name = "xivgear-account-service"
 
+include ":common-libs"
+include ":common-libs:logging"
