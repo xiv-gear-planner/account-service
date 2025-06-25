@@ -26,11 +26,11 @@ class ConstraintViolationExceptionHandler implements ExceptionHandler<Constraint
 			errors << new ValidationErrorSingle().tap {
 				path = cv.propertyPath.toString()
 				message = cv.message
-				Path.Node lastNode = null;
+				Path.Node lastNode = null
 				for (Path.Node node : cv.propertyPath) {
-					lastNode = node;
+					lastNode = node
 				}
-				field = lastNode.getName();
+				field = lastNode.name
 			}
 		}
 		var out = new ValidationErrorResponse()
