@@ -33,7 +33,7 @@ class OracleNoSqlConnector {
 
 	private NoSQLHandleConfig base() {
 		NoSQLHandleConfig config = new NoSQLHandleConfig(endpoint)
-		config.configureDefaultRetryHandler 8, 1_0000
+		config.configureDefaultRetryHandler 8, 2_500
 		return config
 	}
 
