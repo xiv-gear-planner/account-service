@@ -103,6 +103,24 @@ class FullFlowTest {
 			log.info "Session cookie: ${sessionCookie}"
 		}
 
+		// Reject further registration for same email
+		{
+			HttpRequest<RegisterRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/register"),
+					new RegisterRequest(email, password, "My User")
+			).with {
+				addHeaders it
+			}
+
+			HttpResponse<ValidationErrorResponse> response = client.toBlocking().exchange req, Argument.of(ValidationErrorResponse), Argument.of(ValidationErrorResponse)
+			validateResponseHeaders response
+			List<ValidationErrorSingle> errors = response.body().validationErrors
+			Assertions.assertEquals 1, errors.size()
+			Assertions.assertEquals 'This email is already in use', errors[0].message
+			Assertions.assertEquals 'email', errors[0].field
+			Assertions.assertEquals 'register.regRequest.email', errors[0].path
+		}
+
 		// Registration implicitly logs you in.
 		// Check account details.
 		{

@@ -4,6 +4,7 @@ import app.xivgear.accountsvc.AccountOperations
 import app.xivgear.accountsvc.auth.CredentialValidator
 import app.xivgear.accountsvc.auth.PasswordHasher
 import app.xivgear.accountsvc.dto.*
+import app.xivgear.accountsvc.exceptions.EmailInUseException
 import app.xivgear.accountsvc.models.UserAccount
 import app.xivgear.accountsvc.session.SessionTokenStore
 import groovy.transform.CompileStatic
@@ -112,6 +113,14 @@ class AccountController {
 	@Secured(SecurityRule.IS_ANONYMOUS)
 	@Post("/register")
 	@ApiResponse(
+			responseCode = "200",
+			description = "Successful registration",
+			content = @Content(
+					mediaType = "application/json",
+					schema = @Schema(implementation = RegisterResponse.class)
+			)
+	)
+	@ApiResponse(
 			responseCode = "400",
 			description = "Validation error",
 			content = @Content(
@@ -119,12 +128,27 @@ class AccountController {
 					schema = @Schema(implementation = ValidationErrorResponse.class)
 			)
 	)
-	HttpResponse<RegisterResponse> register(@Body @Valid RegisterRequest regRequest, HttpRequest<?> req) {
+	HttpResponse<?> register(@Body @Valid RegisterRequest regRequest, HttpRequest<?> req) {
+
 		String origin = getOrigin req
 		if (origin == null) {
 			return HttpResponse.badRequest()
 		}
-		int user = accOps.addUser regRequest.email(), regRequest.displayName(), regRequest.password()
+		int user
+		try {
+			user = accOps.addUser regRequest.email(), regRequest.displayName(), regRequest.password()
+		}
+		catch (EmailInUseException ignored) {
+			return HttpResponse.badRequest(new ValidationErrorResponse().tap {
+				validationErrors = [
+						new ValidationErrorSingle().tap {
+							field = "email"
+							message = "This email is already in use"
+							path = "register.regRequest.email"
+						}
+				]
+			})
+		}
 		String token = sts.createSessionToken user
 		Cookie sessionCookie = createSessionCookie token, origin
 		return HttpResponse.ok(new RegisterResponse(user)).with {

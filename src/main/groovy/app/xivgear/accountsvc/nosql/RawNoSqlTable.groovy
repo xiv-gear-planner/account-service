@@ -140,11 +140,11 @@ abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 	 * @param values The values to put, other than the PK
 	 * @return
 	 */
-	PutResult putByPK(PkType pk, Map<ColType, ? extends FieldValue> values) {
+	PutResult putByPK(PkType pk, Map<ColType, ? extends FieldValue> values, boolean disallowOverwrite = false) {
 		Map<ColType, FieldValue> combined = new HashMap()
 		combined[primaryKeyCol] = pkToFieldValue pk
 		combined.putAll values
-		return put(combined)
+		return put(combined, disallowOverwrite)
 	}
 
 	/**
@@ -154,7 +154,7 @@ abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 	 * @param values The values. Need not contain the primary key.
 	 * @return
 	 */
-	PutResult put(Map<ColType, ? extends FieldValue> values) {
+	PutResult put(Map<ColType, ? extends FieldValue> values, boolean disallowOverwrite = false) {
 		PutRequest pr = new PutRequest().tap {
 			tableName = this.tableName
 			value = new MapValue().tap {
@@ -162,8 +162,15 @@ abstract class RawNoSqlTable<ColType extends Enum<ColType>, PkType> {
 					put it.key.name(), it.value
 				}
 			}
+			if (disallowOverwrite) {
+				option = PutRequest.Option.IfAbsent
+			}
 		}
-		return handle.put(pr)
+		PutResult result = handle.put(pr)
+		if (disallowOverwrite && result.version == null) {
+			throw new EntryAlreadyExistsException()
+		}
+		return result
 	}
 
 	/**

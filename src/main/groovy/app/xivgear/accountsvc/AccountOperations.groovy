@@ -3,10 +3,12 @@ package app.xivgear.accountsvc
 import app.xivgear.accountsvc.auth.CredentialValidator
 import app.xivgear.accountsvc.auth.PasswordHasher
 import app.xivgear.accountsvc.email.VerificationCodeSender
+import app.xivgear.accountsvc.exceptions.EmailInUseException
 import app.xivgear.accountsvc.models.OracleUserAccount
 import app.xivgear.accountsvc.models.UserAccount
 import app.xivgear.accountsvc.nosql.EmailCol
 import app.xivgear.accountsvc.nosql.EmailsTable
+import app.xivgear.accountsvc.nosql.EntryAlreadyExistsException
 import app.xivgear.accountsvc.nosql.UserCol
 import app.xivgear.accountsvc.nosql.UsersTable
 import groovy.transform.CompileStatic
@@ -55,7 +57,12 @@ class AccountOperations implements CredentialValidator {
 
 		password = passwordHasher.saltAndHash password
 		// Store email first to make sure it is not in use
-		emailsTable.putByPK email, [:]
+		try {
+			emailsTable.putByPK email, [:], true
+		}
+		catch (EntryAlreadyExistsException ignored) {
+			throw new EmailInUseException()
+		}
 		PutResult userResult = usersTable.put([
 				(UserCol.display_name) : new StringValue(displayName),
 				(UserCol.email)        : new StringValue(email),
