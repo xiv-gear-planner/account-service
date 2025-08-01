@@ -5,6 +5,7 @@ import app.xivgear.accountsvc.auth.CredentialValidator
 import app.xivgear.accountsvc.auth.PasswordHasher
 import app.xivgear.accountsvc.dto.*
 import app.xivgear.accountsvc.exceptions.EmailInUseException
+import app.xivgear.accountsvc.exceptions.UserAccountNotFoundException
 import app.xivgear.accountsvc.models.UserAccount
 import app.xivgear.accountsvc.session.SessionTokenStore
 import groovy.transform.CompileStatic
@@ -185,6 +186,76 @@ class AccountController {
 
 		return HttpResponse.ok(new LoginResponse(new AccountInfo(user), "Login successful"))
 				.cookie(sessionCookie)
+	}
+
+	/**
+	 * Forgot password (password reset request)
+	 *
+	 * This is part 1 - you request that a code be sent.
+	 */
+	@PermitAll
+	@Post("/initiatePasswordReset")
+	HttpResponse<?> initiatePasswordReset(@Body @Valid InitiatePasswordResetRequest body, HttpRequest<?> request) {
+
+		String origin = getOrigin request
+		if (origin == null) {
+			return HttpResponse.badRequest()
+		}
+		try {
+			accOps.initiatePasswordReset body.email
+		}
+		catch (UserAccountNotFoundException ignored) {
+			return HttpResponse.notFound()
+		}
+		return HttpResponse.ok()
+	}
+
+	/**
+	 * Forgot password (password reset request)
+	 *
+	 * This is part 2 - user receives email with code, this is how they enter the code.
+	 */
+	@ApiResponse(
+			responseCode = "200",
+			description = "Successful reset"
+	)
+	@ApiResponse(
+			responseCode = "400",
+			description = "Validation error",
+			content = @Content(
+					mediaType = "application/json",
+					schema = @Schema(implementation = ValidationErrorResponse.class)
+			)
+	)
+	@PermitAll
+	@Post("/finalizePasswordReset")
+	HttpResponse<?> finalizePasswordReset(@Body @Valid FinalizePasswordResetRequest body, HttpRequest<?> request) {
+
+		String origin = getOrigin request
+		if (origin == null) {
+			return HttpResponse.badRequest()
+		}
+		boolean result
+		try {
+			result = accOps.finalizePasswordReset body.email, body.token, body.newPassword
+		}
+		catch (UserAccountNotFoundException ignored) {
+			return HttpResponse.notFound()
+		}
+		if (result) {
+			return HttpResponse.ok()
+		}
+		else {
+			return HttpResponse.badRequest(new ValidationErrorResponse().tap {
+				validationErrors = [
+				        new ValidationErrorSingle().tap {
+							message = 'Incorrect Code'
+							field = 'token'
+							path = 'finalizePasswordReset.body.token'
+						}
+				]
+			})
+		}
 	}
 
 	/**

@@ -440,8 +440,168 @@ class FullFlowTest {
 			Assertions.assertEquals myUid, response.body().accountInfo.uid()
 		}
 
-		// TODO: forgot password reset
+		// Reset password, invalid email
+		{
+			HttpRequest<InitiatePasswordResetRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/initiatePasswordReset"),
+					new InitiatePasswordResetRequest().tap {
+						it.email = 'notreal@gmail.com'
+					}
+			).with {
+				addHeaders it
+			}
+			HttpResponse<String> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.NOT_FOUND, response.status
+		}
+		emails.clear()
+		int resetCode
+		// Reset password, valid email
+		{
+			HttpRequest<InitiatePasswordResetRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/initiatePasswordReset"),
+					new InitiatePasswordResetRequest().tap {
+						it.email = email
+					}
+			).with {
+				addHeaders it
+			}
+			HttpResponse<String> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+			Assertions.assertEquals 1, emails.size()
+			Email mail = emails[0]
+			var matcher = mail.subject =~ ".*([0-9]{9})"
+			Assertions.assertTrue matcher.matches()
+			resetCode = Integer.parseInt matcher.group(1)
+		}
+		// Enter wrong email when finalizing
+		{
+			HttpRequest<FinalizePasswordResetRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/finalizePasswordReset"),
+					new FinalizePasswordResetRequest().tap {
+						it.email = 'wrong' + email
+						it.newPassword = 'p@ssw0rd4321'
+						it.token = resetCode
+					}
+			).with {
+				addHeaders it
+			}
+			HttpResponse<String> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.NOT_FOUND, response.status
+		}
+		// Enter wrong code when finalizing
+		{
+			HttpRequest<FinalizePasswordResetRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/finalizePasswordReset"),
+					new FinalizePasswordResetRequest().tap {
+						it.email = email
+						it.newPassword = 'p@ssw0rd4321'
+						it.token = -123
+					}
+			).with {
+				addHeaders it
+			}
+			HttpResponse<ValidationErrorResponse> response = client.toBlocking().exchange req, Argument.of(ValidationErrorResponse), Argument.of(ValidationErrorResponse)
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.BAD_REQUEST, response.status
+			var errors = response.body().validationErrors
+			Assertions.assertEquals 1, errors.size()
+			Assertions.assertEquals 'Incorrect Code', errors[0].message
+			Assertions.assertEquals 'finalizePasswordReset.body.token', errors[0].path
+			Assertions.assertEquals 'token', errors[0].field
+		}
 
+		// Log in again to prove that the password has not changed yet
+		{
+			HttpRequest<LoginRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/login"),
+					new LoginRequest(email, 'p@ssw0rd2')
+			).with {
+				addHeaders it
+			}
+
+			HttpResponse<LoginResponse> response = client.toBlocking().exchange(req, LoginResponse)
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+			response.getCookie("SESSION").orElseThrow()
+		}
+
+		// Enter correct code
+		{
+			HttpRequest<FinalizePasswordResetRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/finalizePasswordReset"),
+					new FinalizePasswordResetRequest().tap {
+						it.email = email
+						it.newPassword = 'p@ssw0rd4321'
+						it.token = resetCode
+					}
+			).with {
+				addHeaders it
+			}
+			HttpResponse<ValidationErrorResponse> response = client.toBlocking().exchange req, Argument.of(ValidationErrorResponse), Argument.of(ValidationErrorResponse)
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+		}
+
+		// New password works
+		Cookie sessionCookie4
+		{
+			HttpRequest<LoginRequest> req = HttpRequest.POST(
+					server.URI.resolve('account/login'),
+					new LoginRequest(email, 'p@ssw0rd4321')
+			).with {
+				addHeaders it
+			}
+
+			HttpResponse<LoginResponse> response = client.toBlocking().exchange(req, LoginResponse)
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+			sessionCookie4 = response.getCookie("SESSION").orElseThrow()
+		}
+
+		// Verify that the old cookie is no longer valid
+		{
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/current")).with {
+				cookie sessionCookie3
+				addHeaders it
+			}
+			HttpResponse<AccountInfoResponse> response = client.toBlocking().exchange req, AccountInfoResponse
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+			Assertions.assertFalse response.body().loggedIn
+			Assertions.assertNull response.body().accountInfo
+		}
+		// Verify that the new cookie is valid
+		{
+			HttpRequest<?> req = HttpRequest.GET(server.URI.resolve("account/current")).with {
+				cookie sessionCookie4
+				addHeaders it
+			}
+			HttpResponse<AccountInfoResponse> response = client.toBlocking().exchange req, AccountInfoResponse
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.OK, response.status
+			Assertions.assertTrue response.body().loggedIn
+			Assertions.assertEquals email, response.body().accountInfo.email()
+			Assertions.assertEquals myUid, response.body().accountInfo.uid()
+		}
+		// Old password no longer works
+		{
+			HttpRequest<LoginRequest> req = HttpRequest.POST(
+					server.URI.resolve("account/login"),
+					new LoginRequest(email, 'p@ssw0rd2')
+			).with {
+				addHeaders it
+			}
+
+			HttpResponse<String> response = client.toBlocking().exchange req, Argument.of(String), Argument.of(String)
+			validateResponseHeaders response
+			Assertions.assertEquals HttpStatus.UNAUTHORIZED, response.status
+			if (response.getCookie("SESSION").present) {
+				throw new AssertionError("Should not have had session cookie" as Object)
+			}
+		}
 
 	}
 
