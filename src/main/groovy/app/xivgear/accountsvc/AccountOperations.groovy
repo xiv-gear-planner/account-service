@@ -4,6 +4,7 @@ import app.xivgear.accountsvc.auth.CredentialValidator
 import app.xivgear.accountsvc.auth.PasswordHasher
 import app.xivgear.accountsvc.email.VerificationCodeSender
 import app.xivgear.accountsvc.exceptions.EmailInUseException
+import app.xivgear.accountsvc.exceptions.UserAccountNotFoundException
 import app.xivgear.accountsvc.models.OracleUserAccount
 import app.xivgear.accountsvc.models.UserAccount
 import app.xivgear.accountsvc.nosql.EmailCol
@@ -11,6 +12,7 @@ import app.xivgear.accountsvc.nosql.EmailsTable
 import app.xivgear.accountsvc.nosql.EntryAlreadyExistsException
 import app.xivgear.accountsvc.nosql.UserCol
 import app.xivgear.accountsvc.nosql.UsersTable
+import app.xivgear.accountsvc.session.SessionTokenStore
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.micronaut.context.annotation.Context
@@ -37,12 +39,14 @@ class AccountOperations implements CredentialValidator {
 	private final UsersTable usersTable
 	private final EmailsTable emailsTable
 	private final PasswordHasher passwordHasher
+	private final SessionTokenStore<Integer> sts
 
-	AccountOperations(VerificationCodeSender verifier, UsersTable usersTable, EmailsTable emailsTable, PasswordHasher passwordHasher) {
+	AccountOperations(VerificationCodeSender verifier, UsersTable usersTable, EmailsTable emailsTable, PasswordHasher passwordHasher, SessionTokenStore<Integer> sts) {
 		this.verifier = verifier
 		this.usersTable = usersTable
 		this.emailsTable = emailsTable
 		this.passwordHasher = passwordHasher
+		this.sts = sts
 	}
 
 	/**
@@ -119,5 +123,31 @@ class AccountOperations implements CredentialValidator {
 			throw new IllegalArgumentException("User tried to resend verification for someone else's email! email '${email}' owned by ${ownerUid} but verified by ${id}")
 		}
 		verifier.sendVerificationCode email, String.format("%06d", foundEmail.getInt("verification_code"))
+	}
+
+	void initiatePasswordReset(String email) {
+		UserAccount user = getByEmail(email)
+		if (user == null) {
+			log.warn("Password reset init: email not found ${email}")
+			throw new UserAccountNotFoundException()
+		}
+		// TODO: throttling?
+		int verificationCode = Math.abs(new SecureRandom().nextInt()) % 1_000_000_000
+		user.passwordResetToken = verificationCode
+		verifier.sendResetCode email, String.format("%09d", verificationCode)
+	}
+
+	boolean finalizePasswordReset(String email, int token, String newPassword) {
+		UserAccount user = getByEmail(email)
+		if (user == null) {
+			log.warn("Password reset final: email not found ${email}")
+			throw new UserAccountNotFoundException()
+		}
+		if (user.passwordResetToken != null && user.passwordResetToken == token) {
+			user.passwordHash = passwordHasher.saltAndHash newPassword
+			sts.invalidateAllForUser user.id
+			return true
+		}
+		return false
 	}
 }

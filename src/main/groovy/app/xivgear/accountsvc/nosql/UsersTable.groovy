@@ -47,6 +47,7 @@ ${email} STRING,
 ${is_verified} BOOLEAN NOT NULL DEFAULT false, 
 ${roles} JSON, 
 ${password_hash} STRING, 
+${password_reset_token} INTEGER,
 PRIMARY KEY(SHARD(${user_id}))
 )
 """

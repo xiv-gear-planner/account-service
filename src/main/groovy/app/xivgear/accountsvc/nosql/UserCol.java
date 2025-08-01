@@ -6,5 +6,6 @@ public enum UserCol {
 	email,
 	is_verified,
 	roles,
-	password_hash
+	password_hash,
+	password_reset_token
 }

@@ -19,7 +19,7 @@ class EmailVerificationCodeSender implements VerificationCodeSender {
 
 	@Override
 	void sendVerificationCode(String email, String code) {
-		emailSender.send(Email.builder().with {
+		emailSender.send Email.builder().with {
 			to email
 			subject "Your Xivgear.app verification code is ${code}"
 			body("""\
@@ -33,6 +33,26 @@ class EmailVerificationCodeSender implements VerificationCodeSender {
 
 			Happy Gearing!
 			""".stripIndent())
-		})
+		}
+	}
+
+	@Override
+	void sendResetCode(String email, String code) {
+		emailSender.send Email.builder().with {
+			to email
+			subject "Your Xivgear.app password reset code is ${code}"
+			body("""\
+			Welcome to Xivgear.app
+
+			Your password reset code is:
+			
+			${code}
+
+			If you did not request a password reset, you can ignore this email.
+
+			Happy Gearing!
+			""".stripIndent())
+		}
+
 	}
 }
