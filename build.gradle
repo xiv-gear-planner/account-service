@@ -101,7 +101,7 @@ tasks.withType(GroovyCompile).configureEach {
 }
 
 tasks.named("dockerfile") {
-	baseImage = "openjdk:21"
+	baseImage = 'eclipse-temurin:21'
 }
 
 test {
