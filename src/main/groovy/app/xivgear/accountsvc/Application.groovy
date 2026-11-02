@@ -1,7 +1,5 @@
 package app.xivgear.accountsvc
 
-import app.xivgear.logging.IpAddressResolver
-import app.xivgear.logging.RequestLoggingFilter
 import groovy.transform.CompileStatic
 import io.micronaut.runtime.Micronaut
 import io.swagger.v3.oas.annotations.OpenAPIDefinition
