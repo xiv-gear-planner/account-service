@@ -51,14 +51,6 @@ micronaut:
       prometheus:
         enabled: true
 
-endpoints:
-  all:
-    enabled: false
-    sensitive: true
-  prometheus:
-    enabled: true
-    sensitive: false
-
 #  session:
 #    filter:
 #      enabled: true
@@ -79,6 +71,14 @@ endpoints:
     from:
       email: ${EMAIL_FROM:`noreply@xivgear.app`}
       name: ${EMAIL_NAME:`Xivgear Email Verification`}
+
+endpoints:
+  all:
+    enabled: false
+    sensitive: true
+  prometheus:
+    enabled: true
+    sensitive: false
 
 
 oci:
