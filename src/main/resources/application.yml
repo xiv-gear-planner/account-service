@@ -34,6 +34,23 @@ micronaut:
         access:
           - isAnonymous()
 
+  metrics:
+    enabled: true
+    binders:
+      jvm:
+        enabled: true
+      processor:
+        enabled: true
+      uptime:
+        enabled: true
+      netty:
+        enabled: true
+        bytebuf-allocators:
+          enabled: true
+    export:
+      prometheus:
+        enabled: true
+
 #  session:
 #    filter:
 #      enabled: true
@@ -54,6 +71,14 @@ micronaut:
     from:
       email: ${EMAIL_FROM:`noreply@xivgear.app`}
       name: ${EMAIL_NAME:`Xivgear Email Verification`}
+
+endpoints:
+  all:
+    enabled: false
+    sensitive: true
+  prometheus:
+    enabled: true
+    sensitive: false
 
 
 oci:
